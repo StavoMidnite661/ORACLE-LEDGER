@@ -1,0 +1,5 @@
+{
+  "name": "SOVRCVLT ORACLE-LEDGER",
+  "description": "A sophisticated financial console for managing a double-entry general ledger for GM Family Trust and SOVR Development Holdings LLC. It tracks payroll, purchase orders, AR, AP, and direct purchases using SOVRCVLT tokens, ensuring GAAP compliance and providing real-time financial insights.",
+  "requestFramePermissions": []
+}
