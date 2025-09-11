@@ -88,6 +88,74 @@ export interface Vendor {
     createdDate: string;
 }
 
+export interface CompanyCard {
+  id: string;
+  cardNumber: string; // Last 4 digits only for display
+  cardType: 'Virtual' | 'Physical' | 'Fleet' | 'Gas';
+  cardProvider: 'Visa' | 'Mastercard' | 'Amex' | 'Discover';
+  assignedTo?: string; // Employee ID or name
+  assignedEntity: Entity;
+  status: 'Active' | 'Suspended' | 'Expired' | 'Cancelled';
+  monthlyLimit: number;
+  dailyLimit: number;
+  transactionLimit: number;
+  spentThisMonth: number;
+  spentThisQuarter: number;
+  spentThisYear: number;
+  allowedCategories: SpendCategory[];
+  blockedCategories: SpendCategory[];
+  expirationDate: string;
+  issueDate: string;
+  lastActivity?: string;
+  billingAddress: string;
+  notes?: string;
+}
+
+export interface CardTransaction {
+  id: string;
+  cardId: string;
+  merchantName: string;
+  merchantCategory: SpendCategory;
+  amount: number;
+  currency: 'USD';
+  transactionDate: string;
+  postingDate: string;
+  description: string;
+  status: 'Posted' | 'Pending' | 'Declined';
+  receiptUrl?: string;
+  location?: string;
+  accountingCode?: string;
+  journalEntryId?: string;
+  approvedBy?: string;
+  notes?: string;
+}
+
+export interface SpendingRule {
+  id: string;
+  cardId: string;
+  ruleType: 'Daily Limit' | 'Monthly Limit' | 'Category Block' | 'Merchant Block' | 'Geographic Restriction';
+  value: string | number;
+  isActive: boolean;
+  createdDate: string;
+  createdBy: string;
+}
+
+export enum SpendCategory {
+  Office = 'Office Supplies',
+  Travel = 'Travel & Lodging',
+  Meals = 'Meals & Entertainment',
+  Software = 'Software & Subscriptions',
+  Marketing = 'Marketing & Advertising',
+  Fuel = 'Fuel & Fleet',
+  Maintenance = 'Maintenance & Repairs',
+  Professional = 'Professional Services',
+  Equipment = 'Equipment & Hardware',
+  Utilities = 'Utilities',
+  Training = 'Training & Education',
+  Insurance = 'Insurance',
+  Other = 'Other Expenses',
+}
+
 export interface BankAccount {
     id: string;
     bankName: string;
@@ -106,6 +174,7 @@ export enum View {
   AccountsPayable = 'ACCOUNTS_PAYABLE',
   VendorPayments = 'VENDOR_PAYMENTS',
   VendorManagement = 'VENDOR_MANAGEMENT',
+  CardManagement = 'CARD_MANAGEMENT',
   Payroll = 'PAYROLL',
   Settings = 'SETTINGS',
 }

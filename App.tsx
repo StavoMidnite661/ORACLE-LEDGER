@@ -10,10 +10,11 @@ import { AccountsReceivableView } from './views/AccountsReceivableView';
 import { AccountsPayableView } from './views/AccountsPayableView';
 import { VendorPaymentsView } from './views/VendorPaymentsView';
 import { VendorManagementView } from './views/VendorManagementView';
+import { CardManagementView } from './views/CardManagementView';
 import { PayrollView } from './views/PayrollView';
 import { SettingsView } from './views/SettingsView';
-import { mockJournalEntries, mockPurchaseOrders, mockInvoices, mockEmployees, mockVendors } from './constants';
-import type { JournalEntry, PurchaseOrder, Invoice, Employee, Vendor } from './types';
+import { mockJournalEntries, mockPurchaseOrders, mockInvoices, mockEmployees, mockVendors, mockCompanyCards, mockCardTransactions } from './constants';
+import type { JournalEntry, PurchaseOrder, Invoice, Employee, Vendor, CompanyCard, CardTransaction } from './types';
 import { View } from './types';
 import { Modal } from './components/shared/Modal';
 
@@ -25,6 +26,8 @@ const App: React.FC = () => {
   const [apInvoices, setApInvoices] = useState<Invoice[]>(mockInvoices.filter(inv => inv.type === 'AP'));
   const [employees, setEmployees] = useState<Employee[]>(mockEmployees);
   const [vendors, setVendors] = useState<Vendor[]>(mockVendors);
+  const [companyCards, setCompanyCards] = useState<CompanyCard[]>(mockCompanyCards);
+  const [cardTransactions] = useState<CardTransaction[]>(mockCardTransactions);
 
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -107,6 +110,27 @@ const App: React.FC = () => {
     ));
   };
 
+  const addCompanyCard = (entry: Omit<CompanyCard, 'id' | 'issueDate' | 'spentThisMonth' | 'spentThisQuarter' | 'spentThisYear' | 'lastActivity'>) => {
+    setCompanyCards(prev => [
+      {
+        id: `CC-${Date.now()}`,
+        issueDate: new Date().toISOString().split('T')[0],
+        spentThisMonth: 0,
+        spentThisQuarter: 0,
+        spentThisYear: 0,
+        lastActivity: undefined,
+        ...entry,
+      },
+      ...prev
+    ]);
+  };
+
+  const updateCompanyCard = (cardId: string, updates: Partial<CompanyCard>) => {
+    setCompanyCards(prev => prev.map(card => 
+      card.id === cardId ? { ...card, ...updates } : card
+    ));
+  };
+
   const renderView = () => {
     switch (activeView) {
       case View.Dashboard:
@@ -138,6 +162,13 @@ const App: React.FC = () => {
                     vendors={vendors}
                     addVendor={addVendor}
                     updateVendor={updateVendor}
+                />;
+      case View.CardManagement:
+        return <CardManagementView 
+                    cards={companyCards}
+                    transactions={cardTransactions}
+                    addCard={addCompanyCard}
+                    updateCard={updateCompanyCard}
                 />;
       case View.Payroll:
         return <PayrollView employees={employees} addEmployee={addEmployee} addJournalEntry={addJournalEntry} />;
