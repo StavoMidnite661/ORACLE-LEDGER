@@ -9,10 +9,11 @@ import { PurchaseOrdersView } from './views/PurchaseOrdersView';
 import { AccountsReceivableView } from './views/AccountsReceivableView';
 import { AccountsPayableView } from './views/AccountsPayableView';
 import { VendorPaymentsView } from './views/VendorPaymentsView';
+import { VendorManagementView } from './views/VendorManagementView';
 import { PayrollView } from './views/PayrollView';
 import { SettingsView } from './views/SettingsView';
-import { mockJournalEntries, mockPurchaseOrders, mockInvoices, mockEmployees } from './constants';
-import type { JournalEntry, PurchaseOrder, Invoice, Employee } from './types';
+import { mockJournalEntries, mockPurchaseOrders, mockInvoices, mockEmployees, mockVendors } from './constants';
+import type { JournalEntry, PurchaseOrder, Invoice, Employee, Vendor } from './types';
 import { View } from './types';
 import { Modal } from './components/shared/Modal';
 
@@ -23,6 +24,7 @@ const App: React.FC = () => {
   const [arInvoices, setArInvoices] = useState<Invoice[]>(mockInvoices.filter(inv => inv.type === 'AR'));
   const [apInvoices, setApInvoices] = useState<Invoice[]>(mockInvoices.filter(inv => inv.type === 'AP'));
   const [employees, setEmployees] = useState<Employee[]>(mockEmployees);
+  const [vendors, setVendors] = useState<Vendor[]>(mockVendors);
 
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -88,6 +90,23 @@ const App: React.FC = () => {
     ]);
   };
 
+  const addVendor = (entry: Omit<Vendor, 'id' | 'createdDate'>) => {
+    setVendors(prev => [
+      {
+        id: `VEN-${Date.now()}`,
+        createdDate: new Date().toISOString().split('T')[0],
+        ...entry,
+      },
+      ...prev
+    ]);
+  };
+
+  const updateVendor = (vendorId: string, updates: Partial<Vendor>) => {
+    setVendors(prev => prev.map(vendor => 
+      vendor.id === vendorId ? { ...vendor, ...updates } : vendor
+    ));
+  };
+
   const renderView = () => {
     switch (activeView) {
       case View.Dashboard:
@@ -113,6 +132,12 @@ const App: React.FC = () => {
                     invoices={apInvoices} 
                     updateInvoiceStatus={updateApInvoiceStatus}
                     addJournalEntry={addJournalEntry} 
+                />;
+      case View.VendorManagement:
+        return <VendorManagementView 
+                    vendors={vendors}
+                    addVendor={addVendor}
+                    updateVendor={updateVendor}
                 />;
       case View.Payroll:
         return <PayrollView employees={employees} addEmployee={addEmployee} addJournalEntry={addJournalEntry} />;

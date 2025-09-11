@@ -57,6 +57,10 @@ export interface Employee {
     id: string;
     name: string;
     annualSalary: number;
+    bankRoutingNumber?: string;
+    bankAccountNumber?: string;
+    paymentMethod?: 'ACH' | 'Wire' | 'Crypto';
+    taxId?: string;
 }
 
 export interface PayrollRun {
@@ -67,6 +71,32 @@ export interface PayrollRun {
     employeeCount: number;
 }
 
+export interface Vendor {
+    id: string;
+    name: string;
+    contactPerson: string;
+    email: string;
+    phone: string;
+    address: string;
+    paymentTerms: string;
+    bankAccountNumber?: string;
+    bankRoutingNumber?: string;
+    taxId: string;
+    status: 'Active' | 'Inactive';
+    category: 'Software' | 'Hardware' | 'Services' | 'Supplies' | 'Professional' | 'Other';
+    notes?: string;
+    createdDate: string;
+}
+
+export interface BankAccount {
+    id: string;
+    bankName: string;
+    accountNumber: string;
+    routingNumber: string;
+    accountType: 'Checking' | 'Savings';
+    isActive: boolean;
+}
+
 export enum View {
   Dashboard = 'DASHBOARD',
   Journal = 'JOURNAL',
@@ -75,6 +105,7 @@ export enum View {
   AccountsReceivable = 'ACCOUNTS_RECEIVABLE',
   AccountsPayable = 'ACCOUNTS_PAYABLE',
   VendorPayments = 'VENDOR_PAYMENTS',
+  VendorManagement = 'VENDOR_MANAGEMENT',
   Payroll = 'PAYROLL',
   Settings = 'SETTINGS',
 }
