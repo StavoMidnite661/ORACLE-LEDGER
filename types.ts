@@ -30,7 +30,7 @@ export interface JournalEntry {
   date: string;
   description: string;
   lines: JournalEntryLine[];
-  source: 'CHAIN' | 'NACHA' | 'PO' | 'AR' | 'AP' | 'PURCHASE' | 'PAYROLL' | 'INTERCOMPANY';
+  source: 'CHAIN' | 'NACHA' | 'PO' | 'AR' | 'AP' | 'PURCHASE' | 'PAYROLL' | 'INTERCOMPANY' | 'PAYMENT';
   status: 'Posted' | 'Pending';
 }
 
@@ -74,6 +74,7 @@ export enum View {
   PurchaseOrders = 'PURCHASE_ORDERS',
   AccountsReceivable = 'ACCOUNTS_RECEIVABLE',
   AccountsPayable = 'ACCOUNTS_PAYABLE',
+  VendorPayments = 'VENDOR_PAYMENTS',
   Payroll = 'PAYROLL',
   Settings = 'SETTINGS',
 }

@@ -8,6 +8,7 @@ import { ChartOfAccountsView } from './views/ChartOfAccountsView';
 import { PurchaseOrdersView } from './views/PurchaseOrdersView';
 import { AccountsReceivableView } from './views/AccountsReceivableView';
 import { AccountsPayableView } from './views/AccountsPayableView';
+import { VendorPaymentsView } from './views/VendorPaymentsView';
 import { PayrollView } from './views/PayrollView';
 import { SettingsView } from './views/SettingsView';
 import { mockJournalEntries, mockPurchaseOrders, mockInvoices, mockEmployees } from './constants';
@@ -73,6 +74,10 @@ const App: React.FC = () => {
     ]);
   };
   
+  const updateApInvoiceStatus = (invoiceId: string, status: Invoice['status']) => {
+    setApInvoices(prev => prev.map(inv => inv.id === invoiceId ? { ...inv, status } : inv));
+  };
+
   const addEmployee = (entry: Omit<Employee, 'id'>) => {
     setEmployees(prev => [
       {
@@ -96,13 +101,19 @@ const App: React.FC = () => {
       case View.Journal:
         return <JournalView journalEntries={journalEntries} addJournalEntry={addJournalEntry} />;
       case View.ChartOfAccounts:
-        return <ChartOfAccountsView />;
+        return <ChartOfAccountsView journalEntries={journalEntries} />;
       case View.PurchaseOrders:
         return <PurchaseOrdersView purchaseOrders={purchaseOrders} addPurchaseOrder={addPurchaseOrder} />;
       case View.AccountsReceivable:
         return <AccountsReceivableView invoices={arInvoices} addInvoice={addArInvoice} />;
       case View.AccountsPayable:
         return <AccountsPayableView invoices={apInvoices} addInvoice={addApInvoice} />;
+      case View.VendorPayments:
+        return <VendorPaymentsView 
+                    invoices={apInvoices} 
+                    updateInvoiceStatus={updateApInvoiceStatus}
+                    addJournalEntry={addJournalEntry} 
+                />;
       case View.Payroll:
         return <PayrollView employees={employees} addEmployee={addEmployee} addJournalEntry={addJournalEntry} />;
       case View.Settings:
