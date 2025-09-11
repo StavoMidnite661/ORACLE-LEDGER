@@ -64,6 +64,20 @@ const getCategoryColor = (category: SpendCategory) => {
 const formatCurrency = (amount: number) => 
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 
+const getCardMonthlySpend = (cardId: string, transactions: CardTransaction[]): number => {
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  return transactions
+    .filter(t => {
+      const postingDate = new Date(t.postingDate || t.transactionDate);
+      return t.cardId === cardId && 
+             t.status === 'Posted' && 
+             postingDate.getMonth() === currentMonth && 
+             postingDate.getFullYear() === currentYear;
+    })
+    .reduce((sum, t) => sum + t.amount, 0);
+};
+
 const getUtilizationPercentage = (spent: number, limit: number) => {
   if (limit === 0) return 0;
   return Math.min((spent / limit) * 100, 100);
@@ -104,8 +118,17 @@ export const CardManagementView: React.FC<CardManagementViewProps> = ({
   const [notes, setNotes] = useState('');
 
   const totalSpending = useMemo(() => {
-    return cards.reduce((sum, card) => sum + card.spentThisMonth, 0);
-  }, [cards]);
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    return transactions
+      .filter(t => {
+        const postingDate = new Date(t.postingDate || t.transactionDate);
+        return t.status === 'Posted' && 
+               postingDate.getMonth() === currentMonth && 
+               postingDate.getFullYear() === currentYear;
+      })
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [transactions]);
 
   const totalLimits = useMemo(() => {
     return cards.reduce((sum, card) => sum + card.monthlyLimit, 0);
@@ -116,7 +139,9 @@ export const CardManagementView: React.FC<CardManagementViewProps> = ({
   }, [cards]);
 
   const recentTransactions = useMemo(() => {
-    return transactions.slice(0, 5);
+    return [...transactions]
+      .sort((a, b) => new Date(b.postingDate || b.transactionDate).getTime() - new Date(a.postingDate || a.transactionDate).getTime())
+      .slice(0, 5);
   }, [transactions]);
 
   const filteredAndSortedCards = useMemo(() => {
@@ -462,12 +487,12 @@ export const CardManagementView: React.FC<CardManagementViewProps> = ({
                     <div>
                       <div className="flex justify-between text-sm mb-1">
                         <span className="text-sov-light-alt">Monthly Spend</span>
-                        <span className="text-sov-light">{formatCurrency(card.spentThisMonth)} / {formatCurrency(card.monthlyLimit)}</span>
+                        <span className="text-sov-light">{formatCurrency(getCardMonthlySpend(card.id, transactions))} / {formatCurrency(card.monthlyLimit)}</span>
                       </div>
                       <div className="w-full bg-gray-700 rounded-full h-2">
                         <div 
-                          className={`h-2 rounded-full ${getUtilizationColor(getUtilizationPercentage(card.spentThisMonth, card.monthlyLimit))}`}
-                          style={{ width: `${getUtilizationPercentage(card.spentThisMonth, card.monthlyLimit)}%` }}
+                          className={`h-2 rounded-full ${getUtilizationColor(getUtilizationPercentage(getCardMonthlySpend(card.id, transactions), card.monthlyLimit))}`}
+                          style={{ width: `${getUtilizationPercentage(getCardMonthlySpend(card.id, transactions), card.monthlyLimit)}%` }}
                         ></div>
                       </div>
                     </div>
