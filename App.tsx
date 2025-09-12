@@ -52,15 +52,19 @@ const App: React.FC = () => {
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [contractAddress, setContractAddress] = useState('0x742d35Cc6634C0532925a3b844Bc454e4438f44e');
 
+  // Counter for unique journal entry IDs
+  const [journalCounter, setJournalCounter] = React.useState(1);
+
   const addJournalEntry = (entry: Omit<JournalEntry, 'id' | 'date'>) => {
     setJournalEntries(prev => [
       { 
-        id: `JE-${Date.now()}`, 
+        id: `JE-${String(journalCounter).padStart(3, '0')}`, 
         date: new Date().toISOString().split('T')[0], 
         ...entry 
       },
       ...prev
     ]);
+    setJournalCounter(prev => prev + 1);
   };
 
   const addPurchaseOrder = (entry: Omit<PurchaseOrder, 'id' | 'date'>) => {
