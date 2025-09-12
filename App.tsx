@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { DashboardView } from './views/DashboardView';
@@ -14,25 +14,30 @@ import { CardManagementView } from './views/CardManagementView';
 import { ConsulCreditsView } from './views/ConsulCreditsView';
 import { PayrollView } from './views/PayrollView';
 import { SettingsView } from './views/SettingsView';
-import { mockJournalEntries, mockPurchaseOrders, mockInvoices, mockEmployees, mockVendors, mockCompanyCards, mockCardTransactions, mockConsulCreditsConfig, mockSupportedTokens, mockConsulCreditsTransactions } from './constants';
+import { mockConsulCreditsConfig, mockSupportedTokens } from './constants';
 import type { JournalEntry, PurchaseOrder, Invoice, Employee, Vendor, CompanyCard, CardTransaction, ConsulCreditsConfig, SupportedToken, ConsulCreditsTransaction, ConsulCreditsStats } from './types';
 import { View } from './types';
 import { Modal } from './components/shared/Modal';
 import { consulCreditsService } from './services/consulCreditsService';
+import { apiService } from './services/apiService';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>(View.Dashboard);
-  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(mockJournalEntries);
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(mockPurchaseOrders);
-  const [arInvoices, setArInvoices] = useState<Invoice[]>(mockInvoices.filter(inv => inv.type === 'AR'));
-  const [apInvoices, setApInvoices] = useState<Invoice[]>(mockInvoices.filter(inv => inv.type === 'AP'));
-  const [employees, setEmployees] = useState<Employee[]>(mockEmployees);
-  const [vendors, setVendors] = useState<Vendor[]>(mockVendors);
-  const [companyCards, setCompanyCards] = useState<CompanyCard[]>(mockCompanyCards);
-  const [cardTransactions] = useState<CardTransaction[]>(mockCardTransactions);
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [arInvoices, setArInvoices] = useState<Invoice[]>([]);
+  const [apInvoices, setApInvoices] = useState<Invoice[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [companyCards, setCompanyCards] = useState<CompanyCard[]>([]);
+  const [cardTransactions, setCardTransactions] = useState<CardTransaction[]>([]);
   const [consulCreditsConfig, setConsulCreditsConfig] = useState<ConsulCreditsConfig>(mockConsulCreditsConfig);
   const [supportedTokens] = useState<SupportedToken[]>(mockSupportedTokens);
-  const [consulCreditsTransactions] = useState<ConsulCreditsTransaction[]>(mockConsulCreditsTransactions);
+  const [consulCreditsTransactions, setConsulCreditsTransactions] = useState<ConsulCreditsTransaction[]>([]);
+  
+  // Loading states
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Mock consul credits stats
   const consulCreditsStats: ConsulCreditsStats = useMemo(() => ({
@@ -55,82 +60,86 @@ const App: React.FC = () => {
   // Counter for unique journal entry IDs (start high to avoid conflicts with mock data)
   const [journalCounter, setJournalCounter] = React.useState(1000);
 
-  const addJournalEntry = (entry: Omit<JournalEntry, 'id' | 'date'>) => {
-    setJournalEntries(prev => [
-      { 
-        id: `JE-${String(journalCounter).padStart(3, '0')}`, 
-        date: new Date().toISOString().split('T')[0], 
-        ...entry 
-      },
-      ...prev
-    ]);
-    setJournalCounter(prev => prev + 1);
+  const addJournalEntry = async (entry: Omit<JournalEntry, 'id' | 'date'>) => {
+    try {
+      const newEntry = await apiService.addJournalEntry(entry);
+      setJournalEntries(prev => [newEntry, ...prev]);
+    } catch (error) {
+      console.error('Failed to add journal entry:', error);
+      setError('Failed to add journal entry');
+    }
   };
 
-  const addPurchaseOrder = (entry: Omit<PurchaseOrder, 'id' | 'date'>) => {
-    setPurchaseOrders(prev => [
-      { 
-        id: `PO-${Date.now()}`, 
-        date: new Date().toISOString().split('T')[0], 
-        ...entry 
-      },
-      ...prev
-    ]);
+  const addPurchaseOrder = async (entry: Omit<PurchaseOrder, 'id' | 'date'>) => {
+    try {
+      const newOrder = await apiService.addPurchaseOrder(entry);
+      setPurchaseOrders(prev => [newOrder, ...prev]);
+    } catch (error) {
+      console.error('Failed to add purchase order:', error);
+      setError('Failed to add purchase order');
+    }
   };
   
-  const addArInvoice = (entry: Omit<Invoice, 'id' | 'issueDate' | 'type'>) => {
-    setArInvoices(prev => [
-      { 
-        id: `INV-AR-${Date.now()}`, 
-        issueDate: new Date().toISOString().split('T')[0], 
-        type: 'AR',
-        ...entry 
-      },
-      ...prev
-    ]);
+  const addArInvoice = async (entry: Omit<Invoice, 'id' | 'issueDate' | 'type'>) => {
+    try {
+      const newInvoice = await apiService.addInvoice({ ...entry, type: 'AR' });
+      setArInvoices(prev => [newInvoice, ...prev]);
+    } catch (error) {
+      console.error('Failed to add AR invoice:', error);
+      setError('Failed to add AR invoice');
+    }
   };
 
-  const addApInvoice = (entry: Omit<Invoice, 'id' | 'issueDate' | 'type'>) => {
-    setApInvoices(prev => [
-      { 
-        id: `INV-AP-${Date.now()}`, 
-        issueDate: new Date().toISOString().split('T')[0], 
-        type: 'AP',
-        ...entry 
-      },
-      ...prev
-    ]);
+  const addApInvoice = async (entry: Omit<Invoice, 'id' | 'issueDate' | 'type'>) => {
+    try {
+      const newInvoice = await apiService.addInvoice({ ...entry, type: 'AP' });
+      setApInvoices(prev => [newInvoice, ...prev]);
+    } catch (error) {
+      console.error('Failed to add AP invoice:', error);
+      setError('Failed to add AP invoice');
+    }
   };
   
-  const updateApInvoiceStatus = (invoiceId: string, status: Invoice['status']) => {
-    setApInvoices(prev => prev.map(inv => inv.id === invoiceId ? { ...inv, status } : inv));
+  const updateApInvoiceStatus = async (invoiceId: string, status: Invoice['status']) => {
+    try {
+      const updatedInvoice = await apiService.updateInvoiceStatus(invoiceId, status);
+      setApInvoices(prev => prev.map(inv => inv.id === invoiceId ? updatedInvoice : inv));
+    } catch (error) {
+      console.error('Failed to update AP invoice status:', error);
+      setError('Failed to update AP invoice status');
+    }
   };
 
-  const addEmployee = (entry: Omit<Employee, 'id'>) => {
-    setEmployees(prev => [
-      {
-        id: `EMP-${Date.now()}`,
-        ...entry,
-      },
-      ...prev
-    ]);
+  const addEmployee = async (entry: Omit<Employee, 'id'>) => {
+    try {
+      const newEmployee = await apiService.addEmployee(entry);
+      setEmployees(prev => [newEmployee, ...prev]);
+    } catch (error) {
+      console.error('Failed to add employee:', error);
+      setError('Failed to add employee');
+    }
   };
 
-  const updateEmployee = (updatedEmployee: Employee) => {
-    setEmployees(prev => 
-      prev.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp)
-    );
+  const updateEmployee = async (updatedEmployee: Employee) => {
+    try {
+      const updated = await apiService.updateEmployee(updatedEmployee);
+      setEmployees(prev => 
+        prev.map(emp => emp.id === updatedEmployee.id ? updated : emp)
+      );
+    } catch (error) {
+      console.error('Failed to update employee:', error);
+      setError('Failed to update employee');
+    }
   };
 
-  const addVendor = (entry: Omit<Vendor, 'id' | 'createdDate'>) => {
-    setVendors(prev => [
-      {
-        id: `VEN-${Date.now()}`,
-        createdDate: new Date().toISOString().split('T')[0],
-        ...entry,
-      },
-      ...prev
-    ]);
+  const addVendor = async (entry: Omit<Vendor, 'id' | 'createdDate'>) => {
+    try {
+      const newVendor = await apiService.addVendor(entry);
+      setVendors(prev => [newVendor, ...prev]);
+    } catch (error) {
+      console.error('Failed to add vendor:', error);
+      setError('Failed to add vendor');
+    }
   };
 
   const updateVendor = (vendorId: string, updates: Partial<Vendor>) => {
@@ -139,30 +148,90 @@ const App: React.FC = () => {
     ));
   };
 
-  const addCompanyCard = (entry: Omit<CompanyCard, 'id' | 'issueDate' | 'spentThisMonth' | 'spentThisQuarter' | 'spentThisYear' | 'lastActivity'>) => {
-    setCompanyCards(prev => [
-      {
-        id: `CC-${Date.now()}`,
+  const addCompanyCard = async (entry: Omit<CompanyCard, 'id' | 'issueDate' | 'spentThisMonth' | 'spentThisQuarter' | 'spentThisYear' | 'lastActivity'>) => {
+    try {
+      // Add missing required fields for API service
+      const cardWithDefaults = {
+        ...entry,
         issueDate: new Date().toISOString().split('T')[0],
         spentThisMonth: 0,
         spentThisQuarter: 0,
         spentThisYear: 0,
-        lastActivity: undefined,
-        ...entry,
-      },
-      ...prev
-    ]);
+        lastActivity: undefined
+      };
+      const newCard = await apiService.addCompanyCard(cardWithDefaults);
+      setCompanyCards(prev => [newCard, ...prev]);
+    } catch (error) {
+      console.error('Failed to add company card:', error);
+      setError('Failed to add company card');
+    }
   };
 
-  const updateCompanyCard = (cardId: string, updates: Partial<CompanyCard>) => {
-    setCompanyCards(prev => prev.map(card => 
-      card.id === cardId ? { ...card, ...updates } : card
-    ));
+  const updateCompanyCard = async (cardId: string, updates: Partial<CompanyCard>) => {
+    try {
+      const fullCard = companyCards.find(card => card.id === cardId);
+      if (!fullCard) throw new Error('Card not found');
+      const updatedCard = await apiService.updateCompanyCard({ ...fullCard, ...updates });
+      setCompanyCards(prev => prev.map(card => 
+        card.id === cardId ? updatedCard : card
+      ));
+    } catch (error) {
+      console.error('Failed to update company card:', error);
+      setError('Failed to update company card');
+    }
   };
 
   const updateConsulCreditsConfig = (updates: Partial<ConsulCreditsConfig>) => {
     setConsulCreditsConfig(prev => ({ ...prev, ...updates }));
   };
+
+  // Load data from API on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // Load all data in parallel
+        const [
+          journalData,
+          purchaseOrderData,
+          invoiceData,
+          employeeData,
+          vendorData,
+          cardData,
+          transactionData,
+          consulCreditsData
+        ] = await Promise.all([
+          apiService.getJournalEntries(),
+          apiService.getPurchaseOrders(),
+          apiService.getInvoices(),
+          apiService.getEmployees(),
+          apiService.getVendors(),
+          apiService.getCompanyCards(),
+          apiService.getCardTransactions(),
+          apiService.getConsulCreditsTransactions()
+        ]);
+
+        setJournalEntries(journalData);
+        setPurchaseOrders(purchaseOrderData);
+        setArInvoices(invoiceData.filter(inv => inv.type === 'AR'));
+        setApInvoices(invoiceData.filter(inv => inv.type === 'AP'));
+        setEmployees(employeeData);
+        setVendors(vendorData);
+        setCompanyCards(cardData);
+        setCardTransactions(transactionData);
+        setConsulCreditsTransactions(consulCreditsData);
+      } catch (err) {
+        console.error('Failed to load data:', err);
+        setError('Failed to load application data. Please refresh the page.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   // Initialize ConsulCredits service and event listening
   React.useEffect(() => {
