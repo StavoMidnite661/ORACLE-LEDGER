@@ -1,6 +1,7 @@
 modules = ["nodejs-20", "web"]
 [agent]
 expertMode = true
+integrations = ["javascript_database:1.0.0"]
 
 [nix]
 channel = "stable-25_05"
@@ -34,14 +35,10 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 34285
-externalPort = 3001
-
-[[ports]]
 localPort = 37081
 externalPort = 3000
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["npm", "start"]
-build = ["npm", "ci", "&&", "npm", "run", "build"]
+run = ["npm", "run", "preview"]
+build = ["npm", "run", "build"]
