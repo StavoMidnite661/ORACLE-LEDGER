@@ -1,4 +1,4 @@
-import type { Account, JournalEntry, PurchaseOrder, Invoice, Employee, Vendor, CompanyCard, CardTransaction } from './types';
+import type { Account, JournalEntry, PurchaseOrder, Invoice, Employee, Vendor, CompanyCard, CardTransaction, ConsulCreditsConfig, SupportedToken, ConsulCreditsTransaction } from './types';
 import { AccountType, Entity, SpendCategory } from './types';
 
 export const CHART_OF_ACCOUNTS: Account[] = [
@@ -607,5 +607,157 @@ export const mockCardTransactions: CardTransaction[] = [
     location: 'Online',
     accountingCode: '6100-001',
     notes: 'Office supplies order pending approval',
+  },
+];
+
+// Consul Credits Mock Data
+export const mockConsulCreditsConfig: ConsulCreditsConfig = {
+  contractAddress: '0x742d35Cc4Bf4E79c3e5f6d4e3d0A8dd6B6E6a5A4',
+  networkName: 'Ethereum Mainnet',
+  chainId: 1,
+  rpcUrl: 'https://eth-mainnet.g.alchemy.com/v2/your-api-key',
+  oracleIntegratorAddress: '0x1234567890abcdef1234567890abcdef12345678',
+  confirmationsRequired: 12,
+  isEnabled: true,
+};
+
+export const mockSupportedTokens: SupportedToken[] = [
+  {
+    address: '0xA0b86a33E6441Cc8e9C7c21fA0AAb59EfE4E7456',
+    symbol: 'USDC',
+    name: 'USD Coin',
+    decimals: 6,
+    exchangeRate: '1000000000000000000', // 1 USDC = 1 Consul Credit
+    isActive: true,
+    totalDeposited: '50000000000000000000000', // 50,000 USDC
+    totalWithdrawn: '15000000000000000000000', // 15,000 USDC
+  },
+  {
+    address: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+    symbol: 'USDT',
+    name: 'Tether USD',
+    decimals: 6,
+    exchangeRate: '1000000000000000000', // 1 USDT = 1 Consul Credit
+    isActive: true,
+    totalDeposited: '30000000000000000000000', // 30,000 USDT
+    totalWithdrawn: '8000000000000000000000', // 8,000 USDT
+  },
+  {
+    address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+    symbol: 'DAI',
+    name: 'Dai Stablecoin',
+    decimals: 18,
+    exchangeRate: '1000000000000000000', // 1 DAI = 1 Consul Credit
+    isActive: true,
+    totalDeposited: '25000000000000000000000', // 25,000 DAI
+    totalWithdrawn: '5000000000000000000000', // 5,000 DAI
+  },
+  {
+    address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
+    symbol: 'WBTC',
+    name: 'Wrapped Bitcoin',
+    decimals: 8,
+    exchangeRate: '45000000000000000000000', // 1 WBTC = 45,000 Consul Credits
+    isActive: true,
+    totalDeposited: '100000000', // 1 WBTC
+    totalWithdrawn: '25000000', // 0.25 WBTC
+  },
+  {
+    address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+    symbol: 'WETH',
+    name: 'Wrapped Ethereum',
+    decimals: 18,
+    exchangeRate: '2500000000000000000000', // 1 WETH = 2,500 Consul Credits
+    isActive: true,
+    totalDeposited: '20000000000000000000', // 20 WETH
+    totalWithdrawn: '5000000000000000000', // 5 WETH
+  },
+];
+
+export const mockConsulCreditsTransactions: ConsulCreditsTransaction[] = [
+  {
+    id: 'CCT-001',
+    txHash: '0xf4e2a1b3c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2',
+    blockNumber: 18500000,
+    timestamp: '2025-09-11T15:30:00.000Z',
+    eventType: 'DEPOSIT',
+    userAddress: '0x742d35Cc4Bf4E79c3e5f6d4e3d0A8dd6B6E6a5A4',
+    tokenAddress: '0xA0b86a33E6441Cc8e9C7c21fA0AAb59EfE4E7456',
+    tokenSymbol: 'USDC',
+    tokenAmount: '5000.000000',
+    consulCreditsAmount: '5000.000000000000000000',
+    exchangeRate: '1000000000000000000',
+    ledgerReference: 'JE-021',
+    journalEntryId: 'JE-021',
+    confirmations: 15,
+    status: 'CONFIRMED',
+  },
+  {
+    id: 'CCT-002',
+    txHash: '0xa1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',
+    blockNumber: 18498500,
+    timestamp: '2025-09-10T10:15:00.000Z',
+    eventType: 'WITHDRAW',
+    userAddress: '0x742d35Cc4Bf4E79c3e5f6d4e3d0A8dd6B6E6a5A4',
+    tokenAddress: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+    tokenSymbol: 'USDT',
+    tokenAmount: '2500.000000',
+    consulCreditsAmount: '2500.000000000000000000',
+    exchangeRate: '1000000000000000000',
+    ledgerReference: 'JE-020',
+    journalEntryId: 'JE-020',
+    confirmations: 20,
+    status: 'CONFIRMED',
+  },
+  {
+    id: 'CCT-003',
+    txHash: '0xb2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3',
+    blockNumber: 18495000,
+    timestamp: '2025-09-09T14:45:00.000Z',
+    eventType: 'ORACLE_MINT',
+    userAddress: '0x742d35Cc4Bf4E79c3e5f6d4e3d0A8dd6B6E6a5A4',
+    tokenAddress: '0x0000000000000000000000000000000000000000',
+    tokenSymbol: 'CONSUL',
+    tokenAmount: '0',
+    consulCreditsAmount: '10000.000000000000000000',
+    exchangeRate: '1000000000000000000',
+    ledgerReference: 'JE-019',
+    journalEntryId: 'JE-019',
+    confirmations: 25,
+    status: 'CONFIRMED',
+  },
+  {
+    id: 'CCT-004',
+    txHash: '0xc3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4',
+    blockNumber: 18492000,
+    timestamp: '2025-09-08T09:20:00.000Z',
+    eventType: 'DEPOSIT',
+    userAddress: '0x9876543210abcdef9876543210abcdef98765432',
+    tokenAddress: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+    tokenSymbol: 'DAI',
+    tokenAmount: '7500.000000000000000000',
+    consulCreditsAmount: '7500.000000000000000000',
+    exchangeRate: '1000000000000000000',
+    ledgerReference: 'JE-018',
+    journalEntryId: 'JE-018',
+    confirmations: 30,
+    status: 'CONFIRMED',
+  },
+  {
+    id: 'CCT-005',
+    txHash: '0xd4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5',
+    blockNumber: 18490000,
+    timestamp: '2025-09-07T16:10:00.000Z',
+    eventType: 'DEPOSIT',
+    userAddress: '0x1234567890abcdef1234567890abcdef12345678',
+    tokenAddress: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
+    tokenSymbol: 'WBTC',
+    tokenAmount: '0.10000000',
+    consulCreditsAmount: '4500.000000000000000000',
+    exchangeRate: '45000000000000000000000',
+    ledgerReference: 'JE-017',
+    journalEntryId: 'JE-017',
+    confirmations: 35,
+    status: 'CONFIRMED',
   },
 ];

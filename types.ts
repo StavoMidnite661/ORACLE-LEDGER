@@ -235,7 +235,7 @@ export interface BlockchainEvent {
   txHash: string;
   blockNumber: number;
   logIndex: number;
-  eventType: 'LEDGER_POSTED' | 'TOKEN_TRANSFER' | 'TOKEN_MINT' | 'TOKEN_BURN';
+  eventType: 'LEDGER_POSTED' | 'TOKEN_TRANSFER' | 'TOKEN_MINT' | 'TOKEN_BURN' | 'TOKEN_DEPOSITED' | 'TOKEN_WITHDRAWN';
   contractAddress: string;
   chainId: number;
   confirmations: number;
@@ -251,4 +251,70 @@ export interface SmartContractMapping {
   accountMapping: Record<string, number>; // Map event params to account IDs
   description: string;
   enabled: boolean;
+}
+
+// Consul Credits Wrapper Contract Types
+export interface ConsulCreditsConfig {
+  contractAddress: string;
+  networkName: string;
+  chainId: number;
+  rpcUrl: string;
+  oracleIntegratorAddress: string;
+  confirmationsRequired: number;
+  isEnabled: boolean;
+}
+
+export interface SupportedToken {
+  address: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  exchangeRate: string; // Consul credits per token (as string to preserve precision)
+  isActive: boolean;
+  totalDeposited: string;
+  totalWithdrawn: string;
+}
+
+export interface ConsulCreditsTransaction {
+  id: string;
+  txHash: string;
+  blockNumber: number;
+  timestamp: string;
+  eventType: 'DEPOSIT' | 'WITHDRAW' | 'ORACLE_MINT' | 'ORACLE_BURN';
+  userAddress: string;
+  tokenAddress: string;
+  tokenSymbol: string;
+  tokenAmount: string;
+  consulCreditsAmount: string;
+  exchangeRate: string;
+  ledgerReference: string;
+  journalEntryId?: string;
+  confirmations: number;
+  status: 'PENDING' | 'CONFIRMED' | 'FAILED';
+}
+
+export interface ConsulCreditsBalance {
+  userAddress: string;
+  totalConsulCredits: string;
+  tokenBalances: Array<{
+    tokenAddress: string;
+    tokenSymbol: string;
+    deposited: string;
+    withdrawn: string;
+    netBalance: string;
+  }>;
+  lastUpdated: string;
+}
+
+export interface ConsulCreditsStats {
+  totalSupply: string;
+  totalUniqueHolders: number;
+  totalTransactions: number;
+  supportedTokensCount: number;
+  contractReserves: Array<{
+    tokenAddress: string;
+    tokenSymbol: string;
+    balance: string;
+    value: string; // In consul credits
+  }>;
 }
