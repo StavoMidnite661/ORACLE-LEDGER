@@ -7,15 +7,23 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0 --port ${PORT:-5000}",
-    "start": "vite preview --host 0.0.0.0 --port ${PORT:-5000}"
+    "start": "vite preview --host 0.0.0.0 --port ${PORT:-5000}",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@google/genai": "^1.16.0",
+    "@neondatabase/serverless": "^1.0.1",
     "@openzeppelin/contracts": "^5.4.0",
+    "autoprefixer": "^10.4.21",
+    "drizzle-kit": "^0.31.4",
+    "drizzle-orm": "^0.44.5",
     "ethers": "^6.15.0",
+    "postcss": "^8.5.6",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "recharts": "^3.1.2",
+    "tailwindcss": "^4.1.13",
     "web3": "^4.16.0"
   },
   "devDependencies": {
