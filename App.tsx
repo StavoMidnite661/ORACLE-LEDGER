@@ -52,8 +52,8 @@ const App: React.FC = () => {
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [contractAddress, setContractAddress] = useState('0x742d35Cc6634C0532925a3b844Bc454e4438f44e');
 
-  // Counter for unique journal entry IDs
-  const [journalCounter, setJournalCounter] = React.useState(1);
+  // Counter for unique journal entry IDs (start high to avoid conflicts with mock data)
+  const [journalCounter, setJournalCounter] = React.useState(1000);
 
   const addJournalEntry = (entry: Omit<JournalEntry, 'id' | 'date'>) => {
     setJournalEntries(prev => [
@@ -114,6 +114,12 @@ const App: React.FC = () => {
       },
       ...prev
     ]);
+  };
+
+  const updateEmployee = (updatedEmployee: Employee) => {
+    setEmployees(prev => 
+      prev.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp)
+    );
   };
 
   const addVendor = (entry: Omit<Vendor, 'id' | 'createdDate'>) => {
@@ -285,7 +291,7 @@ const App: React.FC = () => {
                     updateConfig={updateConsulCreditsConfig}
                 />;
       case View.Payroll:
-        return <PayrollView employees={employees} addEmployee={addEmployee} addJournalEntry={addJournalEntry} />;
+        return <PayrollView employees={employees} addEmployee={addEmployee} updateEmployee={updateEmployee} addJournalEntry={addJournalEntry} />;
       case View.Settings:
         return <SettingsView contractAddress={contractAddress} setContractAddress={setContractAddress} />;
       default:

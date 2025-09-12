@@ -6,6 +6,7 @@ import { PayrollStub } from '../components/payroll/PayrollStub';
 interface PayrollViewProps {
   employees: Employee[];
   addEmployee: (employee: Omit<Employee, 'id'>) => void;
+  updateEmployee: (employee: Employee) => void;
   addJournalEntry: (entry: Omit<JournalEntry, 'id' | 'date'>) => void;
 }
 
@@ -19,12 +20,27 @@ const SortIndicator: React.FC<{ direction?: 'ascending' | 'descending' }> = ({ d
   </span>
 );
 
-export const PayrollView: React.FC<PayrollViewProps> = ({ employees, addEmployee, addJournalEntry }) => {
+export const PayrollView: React.FC<PayrollViewProps> = ({ employees, addEmployee, updateEmployee, addJournalEntry }) => {
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
   const [isConfirmPayrollModalOpen, setIsConfirmPayrollModalOpen] = useState(false);
   const [selectedEmployeeForStub, setSelectedEmployeeForStub] = useState<Employee | null>(null);
   const [name, setName] = useState('');
   const [annualSalary, setAnnualSalary] = useState<number | ''>('');
+  const [bankRoutingNumber, setBankRoutingNumber] = useState('');
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'ACH' | 'Wire' | 'Crypto'>('ACH');
+  const [taxId, setTaxId] = useState('');
+  
+  // Edit employee state
+  const [selectedEmployeeForEdit, setSelectedEmployeeForEdit] = useState<Employee | null>(null);
+  const [isEditEmployeeModalOpen, setIsEditEmployeeModalOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editAnnualSalary, setEditAnnualSalary] = useState<number | ''>('');
+  const [editBankRoutingNumber, setEditBankRoutingNumber] = useState('');
+  const [editBankAccountNumber, setEditBankAccountNumber] = useState('');
+  const [editPaymentMethod, setEditPaymentMethod] = useState<'ACH' | 'Wire' | 'Crypto'>('ACH');
+  const [editTaxId, setEditTaxId] = useState('');
+  
   const [lastPayrollRun, setLastPayrollRun] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: 'name', direction: 'ascending' });
 
@@ -71,10 +87,63 @@ export const PayrollView: React.FC<PayrollViewProps> = ({ employees, addEmployee
   const handleAddEmployee = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !annualSalary || annualSalary <= 0) return;
-    addEmployee({ name, annualSalary });
+    
+    addEmployee({ 
+      name, 
+      annualSalary: Number(annualSalary),
+      bankRoutingNumber: bankRoutingNumber || undefined,
+      bankAccountNumber: bankAccountNumber || undefined,
+      paymentMethod,
+      taxId: taxId || undefined
+    });
+    
     setIsAddEmployeeModalOpen(false);
+    // Clear form
     setName('');
     setAnnualSalary('');
+    setBankRoutingNumber('');
+    setBankAccountNumber('');
+    setPaymentMethod('ACH');
+    setTaxId('');
+  };
+
+  const handleEditEmployee = (employee: Employee) => {
+    setSelectedEmployeeForEdit(employee);
+    setEditName(employee.name);
+    setEditAnnualSalary(employee.annualSalary);
+    setEditBankRoutingNumber(employee.bankRoutingNumber || '');
+    setEditBankAccountNumber(employee.bankAccountNumber || '');
+    setEditPaymentMethod(employee.paymentMethod || 'ACH');
+    setEditTaxId(employee.taxId || '');
+    setIsEditEmployeeModalOpen(true);
+  };
+
+  const handleSaveEditEmployee = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEmployeeForEdit || !editName || !editAnnualSalary || Number(editAnnualSalary) <= 0) return;
+    
+    const updatedEmployee: Employee = {
+      ...selectedEmployeeForEdit,
+      name: editName,
+      annualSalary: Number(editAnnualSalary),
+      bankRoutingNumber: editBankRoutingNumber || undefined,
+      bankAccountNumber: editBankAccountNumber || undefined,
+      paymentMethod: editPaymentMethod,
+      taxId: editTaxId || undefined
+    };
+    
+    updateEmployee(updatedEmployee);
+    
+    setIsEditEmployeeModalOpen(false);
+    setSelectedEmployeeForEdit(null);
+    
+    // Clear edit form
+    setEditName('');
+    setEditAnnualSalary('');
+    setEditBankRoutingNumber('');
+    setEditBankAccountNumber('');
+    setEditPaymentMethod('ACH');
+    setEditTaxId('');
   };
 
   const handleRunPayroll = () => {
@@ -95,18 +164,60 @@ export const PayrollView: React.FC<PayrollViewProps> = ({ employees, addEmployee
       ],
     });
 
-    // 2. Transfer Net Pay to ACH Clearing
-    addJournalEntry({
-      description: 'Transfer net payroll to ACH clearing',
-      source: 'PAYROLL',
-      status: 'Posted',
-      lines: [
-        { accountId: 2400, type: 'DEBIT', amount: totalNetPay },
-        { accountId: 2100, type: 'CREDIT', amount: totalNetPay },
-      ],
-    });
+    // 2. Process individual employee payments by method
+    const achEmployees = employees.filter(emp => emp.paymentMethod === 'ACH' || !emp.paymentMethod);
+    const wireEmployees = employees.filter(emp => emp.paymentMethod === 'Wire');
+    const cryptoEmployees = employees.filter(emp => emp.paymentMethod === 'Crypto');
+
+    // ACH payments (default)
+    if (achEmployees.length > 0) {
+      const achNetPay = achEmployees.reduce((sum, emp) => sum + (emp.annualSalary / 12 * 0.8), 0);
+      addJournalEntry({
+        description: `Transfer ACH payroll for ${achEmployees.length} employees`,
+        source: 'PAYROLL',
+        status: 'Posted',
+        lines: [
+          { accountId: 2400, type: 'DEBIT', amount: achNetPay },
+          { accountId: 2100, type: 'CREDIT', amount: achNetPay }, // ACH-Clearing-LLC
+        ],
+      });
+    }
+
+    // Wire payments
+    if (wireEmployees.length > 0) {
+      const wireNetPay = wireEmployees.reduce((sum, emp) => sum + (emp.annualSalary / 12 * 0.8), 0);
+      addJournalEntry({
+        description: `Wire transfer payroll for ${wireEmployees.length} employees`,
+        source: 'PAYROLL',
+        status: 'Posted',
+        lines: [
+          { accountId: 2400, type: 'DEBIT', amount: wireNetPay },
+          { accountId: 1000, type: 'CREDIT', amount: wireNetPay }, // Operating-Cash-LLC
+        ],
+      });
+    }
+
+    // Crypto payments
+    if (cryptoEmployees.length > 0) {
+      const cryptoNetPay = cryptoEmployees.reduce((sum, emp) => sum + (emp.annualSalary / 12 * 0.8), 0);
+      addJournalEntry({
+        description: `Crypto payroll for ${cryptoEmployees.length} employees`,
+        source: 'PAYROLL',
+        status: 'Posted',
+        lines: [
+          { accountId: 2400, type: 'DEBIT', amount: cryptoNetPay },
+          { accountId: 1001, type: 'CREDIT', amount: cryptoNetPay }, // Consul Credits or crypto assets
+        ],
+      });
+    }
     
-    setLastPayrollRun(`Successfully ran payroll for ${employees.length} employees. Gross: $${totalGrossPay.toFixed(2)}, Net: $${totalNetPay.toFixed(2)}.`);
+    const paymentSummary = [
+      achEmployees.length > 0 && `${achEmployees.length} ACH`,
+      wireEmployees.length > 0 && `${wireEmployees.length} Wire`,
+      cryptoEmployees.length > 0 && `${cryptoEmployees.length} Crypto`
+    ].filter(Boolean).join(', ');
+    
+    setLastPayrollRun(`Successfully ran payroll for ${employees.length} employees (${paymentSummary}). Gross: $${totalGrossPay.toFixed(2)}, Net: $${totalNetPay.toFixed(2)}.`);
     setIsConfirmPayrollModalOpen(false);
   };
   
@@ -156,8 +267,10 @@ export const PayrollView: React.FC<PayrollViewProps> = ({ employees, addEmployee
               <tr>
                 <th className="p-3 cursor-pointer" onClick={() => requestSort('id')}><div className="flex items-center">Employee ID <SortIndicator direction={getSortDirection('id')} /></div></th>
                 <th className="p-3 cursor-pointer" onClick={() => requestSort('name')}><div className="flex items-center">Name <SortIndicator direction={getSortDirection('name')} /></div></th>
+                <th className="p-3 text-center">Payment Method</th>
+                <th className="p-3 text-center">Account Info</th>
                 <th className="p-3 text-right cursor-pointer" onClick={() => requestSort('annualSalary')}><div className="flex items-center justify-end">Annual Salary <SortIndicator direction={getSortDirection('annualSalary')} /></div></th>
-                <th className="p-3 text-right cursor-pointer" onClick={() => requestSort('monthlyGross')}><div className="flex items-center justify-end">Monthly Gross Pay <SortIndicator direction={getSortDirection('monthlyGross')} /></div></th>
+                <th className="p-3 text-right cursor-pointer" onClick={() => requestSort('monthlyGross')}><div className="flex items-center justify-end">Monthly Gross <SortIndicator direction={getSortDirection('monthlyGross')} /></div></th>
                 <th className="p-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -166,13 +279,38 @@ export const PayrollView: React.FC<PayrollViewProps> = ({ employees, addEmployee
                 <tr key={emp.id} className="border-b border-gray-800 hover:bg-gray-800/50">
                   <td className="p-3 font-mono text-sm">{emp.id}</td>
                   <td className="p-3">{emp.name}</td>
+                  <td className="p-3 text-center">
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                      emp.paymentMethod === 'Wire' ? 'bg-orange-500/20 text-orange-400' :
+                      emp.paymentMethod === 'Crypto' ? 'bg-purple-500/20 text-purple-400' :
+                      'bg-blue-500/20 text-blue-400'
+                    }`}>
+                      {emp.paymentMethod || 'ACH'}
+                    </span>
+                  </td>
+                  <td className="p-3 text-center text-sm">
+                    {emp.bankAccountNumber ? 
+                      `****${emp.bankAccountNumber.slice(-4)}` : 
+                      <span className="text-sov-light-alt italic">Not set</span>
+                    }
+                    {emp.bankRoutingNumber && (
+                      <div className="text-xs text-sov-light-alt">
+                        RT: ****{emp.bankRoutingNumber.slice(-4)}
+                      </div>
+                    )}
+                  </td>
                   <td className="p-3 text-right font-mono">${emp.annualSalary.toLocaleString()}</td>
                   <td className="p-3 text-right font-mono">${(emp.annualSalary / 12).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td className="p-3 text-right">
+                  <td className="p-3 text-right space-x-2">
+                    <button 
+                      onClick={() => handleEditEmployee(emp)}
+                      className="bg-sov-gold/20 text-sov-gold text-xs font-bold py-1 px-3 rounded-lg hover:bg-sov-gold/30 transition-colors">
+                      Edit
+                    </button>
                     <button 
                       onClick={() => setSelectedEmployeeForStub(emp)}
                       className="bg-sov-accent/20 text-sov-accent text-xs font-bold py-1 px-3 rounded-lg hover:bg-sov-accent/30 transition-colors">
-                      View Stub
+                      Stub
                     </button>
                   </td>
                 </tr>
@@ -184,17 +322,86 @@ export const PayrollView: React.FC<PayrollViewProps> = ({ employees, addEmployee
       
       <Modal isOpen={isAddEmployeeModalOpen} onClose={() => setIsAddEmployeeModalOpen(false)} title="Add New Employee">
         <form onSubmit={handleAddEmployee} className="space-y-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-sov-light-alt">Employee Name</label>
-            <input type="text" id="name" value={name} onChange={e => setName(e.target.value)} required className="mt-1 block w-full bg-sov-dark border border-gray-600 rounded-md shadow-sm py-2 px-3 text-sov-light focus:outline-none focus:ring-sov-accent focus:border-sov-accent" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-sov-light-alt">Employee Name</label>
+              <input type="text" id="name" value={name} onChange={e => setName(e.target.value)} required className="mt-1 block w-full bg-sov-dark border border-gray-600 rounded-md shadow-sm py-2 px-3 text-sov-light focus:outline-none focus:ring-sov-accent focus:border-sov-accent" />
+            </div>
+            <div>
+              <label htmlFor="annualSalary" className="block text-sm font-medium text-sov-light-alt">Annual Salary</label>
+              <input type="number" id="annualSalary" value={annualSalary} onChange={e => setAnnualSalary(e.target.valueAsNumber || '')} min="1" step="1" required className="mt-1 block w-full bg-sov-dark border border-gray-600 rounded-md shadow-sm py-2 px-3 text-sov-light focus:outline-none focus:ring-sov-accent focus:border-sov-accent" />
+            </div>
           </div>
           <div>
-            <label htmlFor="annualSalary" className="block text-sm font-medium text-sov-light-alt">Annual Salary</label>
-            <input type="number" id="annualSalary" value={annualSalary} onChange={e => setAnnualSalary(e.target.valueAsNumber || '')} min="1" step="1" required className="mt-1 block w-full bg-sov-dark border border-gray-600 rounded-md shadow-sm py-2 px-3 text-sov-light focus:outline-none focus:ring-sov-accent focus:border-sov-accent" />
+            <label htmlFor="paymentMethod" className="block text-sm font-medium text-sov-light-alt">Payment Method</label>
+            <select id="paymentMethod" value={paymentMethod} onChange={e => setPaymentMethod(e.target.value as 'ACH' | 'Wire' | 'Crypto')} className="mt-1 block w-full bg-sov-dark border border-gray-600 rounded-md shadow-sm py-2 px-3 text-sov-light focus:outline-none focus:ring-sov-accent focus:border-sov-accent">
+              <option value="ACH">ACH Direct Deposit</option>
+              <option value="Wire">Wire Transfer</option>
+              <option value="Crypto">Cryptocurrency</option>
+            </select>
+          </div>
+          {paymentMethod !== 'Crypto' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="bankRoutingNumber" className="block text-sm font-medium text-sov-light-alt">Bank Routing Number</label>
+                <input type="text" id="bankRoutingNumber" value={bankRoutingNumber} onChange={e => setBankRoutingNumber(e.target.value)} className="mt-1 block w-full bg-sov-dark border border-gray-600 rounded-md shadow-sm py-2 px-3 text-sov-light focus:outline-none focus:ring-sov-accent focus:border-sov-accent" placeholder="9 digits" maxLength={9} />
+              </div>
+              <div>
+                <label htmlFor="bankAccountNumber" className="block text-sm font-medium text-sov-light-alt">Bank Account Number</label>
+                <input type="text" id="bankAccountNumber" value={bankAccountNumber} onChange={e => setBankAccountNumber(e.target.value)} className="mt-1 block w-full bg-sov-dark border border-gray-600 rounded-md shadow-sm py-2 px-3 text-sov-light focus:outline-none focus:ring-sov-accent focus:border-sov-accent" placeholder="Account number" />
+              </div>
+            </div>
+          )}
+          <div>
+            <label htmlFor="taxId" className="block text-sm font-medium text-sov-light-alt">Tax ID / SSN</label>
+            <input type="text" id="taxId" value={taxId} onChange={e => setTaxId(e.target.value)} className="mt-1 block w-full bg-sov-dark border border-gray-600 rounded-md shadow-sm py-2 px-3 text-sov-light focus:outline-none focus:ring-sov-accent focus:border-sov-accent" placeholder="XXX-XX-XXXX" />
           </div>
           <div className="flex justify-end pt-4 space-x-2">
             <button type="button" onClick={() => setIsAddEmployeeModalOpen(false)} className="bg-sov-dark-alt border border-gray-600 text-sov-light font-bold py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors">Cancel</button>
             <button type="submit" className="bg-sov-accent text-sov-dark font-bold py-2 px-4 rounded-lg hover:bg-sov-accent-hover transition-colors">Save Employee</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal isOpen={isEditEmployeeModalOpen} onClose={() => setIsEditEmployeeModalOpen(false)} title="Edit Employee">
+        <form onSubmit={handleSaveEditEmployee} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="editName" className="block text-sm font-medium text-sov-light-alt">Employee Name</label>
+              <input type="text" id="editName" value={editName} onChange={e => setEditName(e.target.value)} required className="mt-1 block w-full bg-sov-dark border border-gray-600 rounded-md shadow-sm py-2 px-3 text-sov-light focus:outline-none focus:ring-sov-accent focus:border-sov-accent" />
+            </div>
+            <div>
+              <label htmlFor="editAnnualSalary" className="block text-sm font-medium text-sov-light-alt">Annual Salary</label>
+              <input type="number" id="editAnnualSalary" value={editAnnualSalary} onChange={e => setEditAnnualSalary(e.target.valueAsNumber || '')} min="1" step="1" required className="mt-1 block w-full bg-sov-dark border border-gray-600 rounded-md shadow-sm py-2 px-3 text-sov-light focus:outline-none focus:ring-sov-accent focus:border-sov-accent" />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="editPaymentMethod" className="block text-sm font-medium text-sov-light-alt">Payment Method</label>
+            <select id="editPaymentMethod" value={editPaymentMethod} onChange={e => setEditPaymentMethod(e.target.value as 'ACH' | 'Wire' | 'Crypto')} className="mt-1 block w-full bg-sov-dark border border-gray-600 rounded-md shadow-sm py-2 px-3 text-sov-light focus:outline-none focus:ring-sov-accent focus:border-sov-accent">
+              <option value="ACH">ACH Direct Deposit</option>
+              <option value="Wire">Wire Transfer</option>
+              <option value="Crypto">Cryptocurrency</option>
+            </select>
+          </div>
+          {editPaymentMethod !== 'Crypto' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="editBankRoutingNumber" className="block text-sm font-medium text-sov-light-alt">Bank Routing Number</label>
+                <input type="text" id="editBankRoutingNumber" value={editBankRoutingNumber} onChange={e => setEditBankRoutingNumber(e.target.value)} className="mt-1 block w-full bg-sov-dark border border-gray-600 rounded-md shadow-sm py-2 px-3 text-sov-light focus:outline-none focus:ring-sov-accent focus:border-sov-accent" placeholder="9 digits" maxLength={9} />
+              </div>
+              <div>
+                <label htmlFor="editBankAccountNumber" className="block text-sm font-medium text-sov-light-alt">Bank Account Number</label>
+                <input type="text" id="editBankAccountNumber" value={editBankAccountNumber} onChange={e => setEditBankAccountNumber(e.target.value)} className="mt-1 block w-full bg-sov-dark border border-gray-600 rounded-md shadow-sm py-2 px-3 text-sov-light focus:outline-none focus:ring-sov-accent focus:border-sov-accent" placeholder="Account number" />
+              </div>
+            </div>
+          )}
+          <div>
+            <label htmlFor="editTaxId" className="block text-sm font-medium text-sov-light-alt">Tax ID / SSN</label>
+            <input type="text" id="editTaxId" value={editTaxId} onChange={e => setEditTaxId(e.target.value)} className="mt-1 block w-full bg-sov-dark border border-gray-600 rounded-md shadow-sm py-2 px-3 text-sov-light focus:outline-none focus:ring-sov-accent focus:border-sov-accent" placeholder="XXX-XX-XXXX" />
+          </div>
+          <div className="flex justify-end pt-4 space-x-2">
+            <button type="button" onClick={() => setIsEditEmployeeModalOpen(false)} className="bg-sov-dark-alt border border-gray-600 text-sov-light font-bold py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors">Cancel</button>
+            <button type="submit" className="bg-sov-accent text-sov-dark font-bold py-2 px-4 rounded-lg hover:bg-sov-accent-hover transition-colors">Update Employee</button>
           </div>
         </form>
       </Modal>
