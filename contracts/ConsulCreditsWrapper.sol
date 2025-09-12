@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
@@ -13,6 +14,7 @@ import "@openzeppelin/contracts/security/Pausable.sol";
  * Designed to integrate with the SOVRCVLT Oracle Ledger system for automated bookkeeping
  */
 contract ConsulCreditsWrapper is ERC20, ReentrancyGuard, Ownable, Pausable {
+    using SafeERC20 for IERC20;
     // Supported ERC-20 tokens and their exchange rates to consul credits
     mapping(address => uint256) public supportedTokens; // token address => consul credits per token (scaled by 1e18)
     mapping(address => bool) public isTokenSupported;
@@ -27,7 +29,7 @@ contract ConsulCreditsWrapper is ERC20, ReentrancyGuard, Ownable, Pausable {
         uint256 tokenAmount,
         uint256 consulCreditsIssued,
         uint256 exchangeRate,
-        string indexed ledgerReference
+        string ledgerReference
     );
     
     event TokenWithdrawn(
@@ -36,7 +38,7 @@ contract ConsulCreditsWrapper is ERC20, ReentrancyGuard, Ownable, Pausable {
         uint256 consulCreditsBurned,
         uint256 tokenAmount,
         uint256 exchangeRate,
-        string indexed ledgerReference
+        string ledgerReference
     );
     
     event ExchangeRateUpdated(
@@ -117,7 +119,7 @@ contract ConsulCreditsWrapper is ERC20, ReentrancyGuard, Ownable, Pausable {
         require(consulCreditsToIssue > 0, "Insufficient amount for conversion");
         
         // Transfer tokens from user to contract
-        IERC20(token).transferFrom(msg.sender, address(this), tokenAmount);
+        IERC20(token).safeTransferFrom(msg.sender, address(this), tokenAmount);
         
         // Mint consul credits to user
         _mint(msg.sender, consulCreditsToIssue);
@@ -157,7 +159,7 @@ contract ConsulCreditsWrapper is ERC20, ReentrancyGuard, Ownable, Pausable {
         _burn(msg.sender, consulCreditsAmount);
         
         // Transfer tokens to user
-        IERC20(token).transfer(msg.sender, tokenAmount);
+        IERC20(token).safeTransfer(msg.sender, tokenAmount);
         
         emit TokenWithdrawn(
             msg.sender,
@@ -275,6 +277,6 @@ contract ConsulCreditsWrapper is ERC20, ReentrancyGuard, Ownable, Pausable {
      */
     function emergencyWithdraw(address token, address to, uint256 amount) external onlyOwner {
         require(to != address(0), "Invalid destination");
-        IERC20(token).transfer(to, amount);
+        IERC20(token).safeTransfer(to, amount);
     }
 }

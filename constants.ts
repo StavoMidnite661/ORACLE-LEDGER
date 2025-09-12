@@ -612,13 +612,13 @@ export const mockCardTransactions: CardTransaction[] = [
 
 // Consul Credits Mock Data
 export const mockConsulCreditsConfig: ConsulCreditsConfig = {
-  contractAddress: '0x742d35Cc4Bf4E79c3e5f6d4e3d0A8dd6B6E6a5A4',
-  networkName: 'Ethereum Mainnet',
-  chainId: 1,
-  rpcUrl: 'https://eth-mainnet.g.alchemy.com/v2/your-api-key',
-  oracleIntegratorAddress: '0x1234567890abcdef1234567890abcdef12345678',
-  confirmationsRequired: 12,
-  isEnabled: true,
+  contractAddress: '0x742d35Cc6Bf4E79c3e5f6d4e3d0A8dd6B6E6a5A4', // Fixed checksum
+  networkName: 'Ethereum Sepolia Testnet',
+  chainId: 11155111,
+  rpcUrl: 'https://rpc.sepolia.org', // Public testnet RPC
+  oracleIntegratorAddress: '0x1234567890AbcdEF1234567890aBcdef12345678', // Fixed checksum
+  confirmationsRequired: 3,
+  isEnabled: false, // Disabled by default since contract isn't deployed
 };
 
 export const mockSupportedTokens: SupportedToken[] = [

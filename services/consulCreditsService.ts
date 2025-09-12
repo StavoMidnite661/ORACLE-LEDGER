@@ -52,6 +52,7 @@ export class ConsulCreditsService {
   private contract: ethers.Contract | null = null;
   private config: ConsulCreditsConfig | null = null;
   private eventListeners: Map<string, any> = new Map();
+  private processedTransactions: Set<string> = new Set(); // For deduplication
 
   constructor() {
     // Initialize with default config if available
@@ -63,11 +64,19 @@ export class ConsulCreditsService {
    */
   async initialize(config: ConsulCreditsConfig): Promise<void> {
     try {
+      console.log('Starting initialization with config:', config);
       this.config = config;
       
+      console.log('Creating provider with RPC URL:', config.rpcUrl);
       // Create provider
       this.provider = new ethers.JsonRpcProvider(config.rpcUrl);
       
+      console.log('Testing provider connection...');
+      // Test provider connection
+      const network = await this.provider.getNetwork();
+      console.log('Connected to network:', network);
+      
+      console.log('Creating contract instance with address:', config.contractAddress);
       // Create contract instance
       this.contract = new ethers.Contract(
         config.contractAddress,
@@ -75,12 +84,16 @@ export class ConsulCreditsService {
         this.provider
       );
 
+      console.log('Verifying contract...');
       // Verify contract is deployed and accessible
       await this.verifyContract();
       
       console.log('ConsulCreditsService initialized successfully');
     } catch (error) {
       console.error('Failed to initialize ConsulCreditsService:', error);
+      console.error('Error name:', error instanceof Error ? error.name : 'Unknown');
+      console.error('Error message:', error instanceof Error ? error.message : String(error));
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
       throw error;
     }
   }
@@ -248,8 +261,18 @@ export class ConsulCreditsService {
     const depositListener = async (...args: any[]) => {
       const [user, token, tokenAmount, consulCreditsIssued, exchangeRate, ledgerReference, event] = args;
       
+      const transactionId = `${event.transactionHash}-${event.logIndex}`;
+      
+      // Deduplicate based on transaction hash and log index
+      if (this.processedTransactions.has(transactionId)) {
+        console.log(`Transaction ${transactionId} already processed, skipping`);
+        return;
+      }
+      
+      this.processedTransactions.add(transactionId);
+      
       const transaction: ConsulCreditsTransaction = {
-        id: `${event.transactionHash}-${event.logIndex}`,
+        id: transactionId,
         txHash: event.transactionHash,
         blockNumber: event.blockNumber,
         timestamp: new Date().toISOString(), // Would get actual block timestamp
@@ -272,8 +295,18 @@ export class ConsulCreditsService {
     const withdrawListener = async (...args: any[]) => {
       const [user, token, consulCreditsBurned, tokenAmount, exchangeRate, ledgerReference, event] = args;
       
+      const transactionId = `${event.transactionHash}-${event.logIndex}`;
+      
+      // Deduplicate based on transaction hash and log index
+      if (this.processedTransactions.has(transactionId)) {
+        console.log(`Transaction ${transactionId} already processed, skipping`);
+        return;
+      }
+      
+      this.processedTransactions.add(transactionId);
+      
       const transaction: ConsulCreditsTransaction = {
-        id: `${event.transactionHash}-${event.logIndex}`,
+        id: transactionId,
         txHash: event.transactionHash,
         blockNumber: event.blockNumber,
         timestamp: new Date().toISOString(),

@@ -18,6 +18,7 @@ import { mockJournalEntries, mockPurchaseOrders, mockInvoices, mockEmployees, mo
 import type { JournalEntry, PurchaseOrder, Invoice, Employee, Vendor, CompanyCard, CardTransaction, ConsulCreditsConfig, SupportedToken, ConsulCreditsTransaction, ConsulCreditsStats } from './types';
 import { View } from './types';
 import { Modal } from './components/shared/Modal';
+import { consulCreditsService } from './services/consulCreditsService';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>(View.Dashboard);
@@ -152,6 +153,85 @@ const App: React.FC = () => {
   const updateConsulCreditsConfig = (updates: Partial<ConsulCreditsConfig>) => {
     setConsulCreditsConfig(prev => ({ ...prev, ...updates }));
   };
+
+  // Initialize ConsulCredits service and event listening
+  React.useEffect(() => {
+    const initializeConsulCreditsService = async () => {
+      if (!consulCreditsConfig.isEnabled) {
+        console.log('ConsulCredits service disabled, skipping initialization');
+        return;
+      }
+      
+      console.log('Initializing ConsulCredits service with config:', consulCreditsConfig);
+      
+      try {
+        await consulCreditsService.initialize(consulCreditsConfig);
+        
+        // Set up event listeners for blockchain events
+        await consulCreditsService.startEventListening(
+          // Handle token deposits
+          async (transaction: ConsulCreditsTransaction) => {
+            console.log('Token deposited:', transaction);
+            
+            // Create journal entry for the deposit
+            const journalEntry = consulCreditsService.createJournalEntryFromTransaction(
+              transaction,
+              {
+                consulCreditsAccount: 1001, // Asset: Consul Credits
+                tokenAccount: 2001          // Liability: Token Deposits
+              }
+            );
+            
+            // Add to journal entries
+            setJournalEntries(prev => [
+              { 
+                id: `CC-${transaction.id}`, 
+                date: new Date().toISOString().split('T')[0], 
+                ...journalEntry 
+              },
+              ...prev
+            ]);
+          },
+          
+          // Handle token withdrawals
+          async (transaction: ConsulCreditsTransaction) => {
+            console.log('Token withdrawn:', transaction);
+            
+            // Create journal entry for the withdrawal
+            const journalEntry = consulCreditsService.createJournalEntryFromTransaction(
+              transaction,
+              {
+                consulCreditsAccount: 1001, // Asset: Consul Credits
+                tokenAccount: 2001          // Liability: Token Deposits
+              }
+            );
+            
+            // Add to journal entries
+            setJournalEntries(prev => [
+              { 
+                id: `CC-${transaction.id}`, 
+                date: new Date().toISOString().split('T')[0], 
+                ...journalEntry 
+              },
+              ...prev
+            ]);
+          }
+        );
+        
+        console.log('ConsulCredits service initialized and event listening started');
+      } catch (error) {
+        console.error('Failed to initialize ConsulCredits service:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      }
+    };
+    
+    initializeConsulCreditsService();
+    
+    return () => {
+      consulCreditsService.stopEventListening();
+    };
+  }, [consulCreditsConfig.isEnabled, consulCreditsConfig.contractAddress, consulCreditsConfig.rpcUrl]);
 
   const renderView = () => {
     switch (activeView) {

@@ -11,7 +11,7 @@ A sophisticated financial console for managing a double-entry general ledger for
 - **AI Integration**: Google Gemini API for financial analysis
 - **Deployment**: Configured for autoscale deployment
 
-## Recent Changes (September 11, 2025)
+## Recent Changes (September 12, 2025)
 - ✅ Configured Vite for Replit environment (host: 0.0.0.0, port: 5000)
 - ✅ Added HMR configuration for HTTPS proxy support
 - ✅ Set up GEMINI_API_KEY environment variable
@@ -24,6 +24,13 @@ A sophisticated financial console for managing a double-entry general ledger for
   - Spending controls and utilization monitoring
   - Card lifecycle management (create, suspend, activate)
   - Enterprise-ready with proper data integrity and React patterns
+- ✅ **Implemented comprehensive Consul Credits blockchain integration**
+  - ConsulCreditsWrapper smart contract with SafeERC20 security
+  - ERC-20 token deposit/withdrawal system with exchange rate management
+  - Event-to-ledger integration for automatic journal entry creation
+  - Oracle integrator functionality for mint/burn operations
+  - Full UI management interface with transaction monitoring
+  - Deduplication and error handling for blockchain events
 
 ## Environment Configuration
 - **GEMINI_API_KEY**: Required for AI financial analysis features
@@ -42,6 +49,12 @@ A sophisticated financial console for managing a double-entry general ledger for
   - Real-time transaction monitoring and analytics
   - Spending controls with daily/monthly/transaction limits
   - Card assignment tracking and utilization reports
+- **Consul Credits blockchain integration**
+  - Smart contract wrapper for ERC-20 token deposits
+  - Automatic journal entry creation from blockchain events
+  - Oracle integrator for off-chain mint/burn operations
+  - Real-time transaction monitoring and reserves tracking
+  - Secure card number reveal system with audit trails
 - Payroll processing
 - Vendor payment tracking
 
