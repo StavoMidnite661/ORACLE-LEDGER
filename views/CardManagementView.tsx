@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import type { CompanyCard, CardTransaction } from '../types';
+import type { CompanyCard, CardTransaction, AuditEvent, CardRevealRequest, CardRevealResponse } from '../types';
 import { Entity, SpendCategory } from '../types';
 import { Modal } from '../components/shared/Modal';
 
@@ -117,6 +117,13 @@ export const CardManagementView: React.FC<CardManagementViewProps> = ({
   const [billingAddress, setBillingAddress] = useState('123 Main St, San Francisco, CA 94105');
   const [notes, setNotes] = useState('');
 
+  // Card reveal state
+  const [showRevealModal, setShowRevealModal] = useState(false);
+  const [revealCardId, setRevealCardId] = useState<string>('');
+  const [revealReason, setRevealReason] = useState('');
+  const [revealedCardData, setRevealedCardData] = useState<{fullNumber: string, expiresAt: string, auditId: string} | null>(null);
+  const [revealTimeRemaining, setRevealTimeRemaining] = useState<number>(0);
+
   const totalSpending = useMemo(() => {
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
@@ -148,7 +155,7 @@ export const CardManagementView: React.FC<CardManagementViewProps> = ({
     let filtered = cards.filter(card => {
       const matchesSearch = searchTerm === '' || 
         card.assignedTo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        card.cardNumber.includes(searchTerm) ||
+        card.cardNumber.last4.includes(searchTerm) ||
         card.notes?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesType = filterCardType === '' || card.cardType === filterCardType;
@@ -202,7 +209,7 @@ export const CardManagementView: React.FC<CardManagementViewProps> = ({
     const spendCategories = Object.values(SpendCategory);
     
     addCard({
-      cardNumber: `****-****-****-${Math.floor(1000 + Math.random() * 9000)}`,
+      cardNumber: { last4: Math.floor(1000 + Math.random() * 9000).toString(), providerTokenId: `token_${Date.now()}` },
       cardType,
       cardProvider,
       assignedTo,
@@ -235,6 +242,74 @@ export const CardManagementView: React.FC<CardManagementViewProps> = ({
 
   const handleUpdateLimits = (card: CompanyCard, newLimits: { monthlyLimit?: number; dailyLimit?: number; transactionLimit?: number }) => {
     updateCard(card.id, newLimits);
+  };
+
+  // Card reveal functionality
+  const handleRevealCard = (cardId: string) => {
+    setRevealCardId(cardId);
+    setRevealReason('');
+    setShowRevealModal(true);
+  };
+
+  const submitCardReveal = () => {
+    if (!revealReason.trim()) {
+      alert('Please provide a reason for revealing the card number');
+      return;
+    }
+
+    // Simulate API call for card reveal (in real app, this would be a secure backend call)
+    const card = cards.find(c => c.id === revealCardId);
+    if (!card) return;
+
+    // Mock full card number based on last 4 digits and provider
+    const providerPrefix = {
+      'Visa': '4532',
+      'Mastercard': '5555',
+      'Amex': '3782',
+      'Discover': '6011'
+    }[card.cardProvider] || '4532';
+    
+    const fullNumber = `${providerPrefix}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${card.cardNumber.last4}`;
+    const expiresAt = new Date(Date.now() + 60000).toISOString(); // 60 seconds from now
+    const auditId = `AUDIT-${Date.now()}`;
+
+    // Create audit event (in real app, this would be logged to backend)
+    const auditEvent: AuditEvent = {
+      id: auditId,
+      timestamp: new Date().toISOString(),
+      actor: 'Current User', // In real app, this would be the authenticated user
+      action: 'CARD_NUMBER_REVEALED',
+      targetId: revealCardId,
+      reason: revealReason,
+      result: 'SUCCESS',
+      metadata: { cardType: card.cardType, provider: card.cardProvider }
+    };
+
+    console.log('Card reveal audit event:', auditEvent);
+
+    setRevealedCardData({ fullNumber, expiresAt, auditId });
+    setRevealTimeRemaining(60); // 60 seconds
+    setShowRevealModal(false);
+
+    // Start countdown timer
+    const timer = setInterval(() => {
+      setRevealTimeRemaining(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setRevealedCardData(null);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Card number copied to clipboard');
+    }).catch(() => {
+      alert('Failed to copy to clipboard');
+    });
   };
 
   return (
@@ -470,7 +545,20 @@ export const CardManagementView: React.FC<CardManagementViewProps> = ({
                       </div>
                       <div>
                         <p className="font-semibold text-sov-light">{card.assignedTo || 'Unassigned'}</p>
-                        <p className="text-sm text-sov-light-alt font-mono">{card.cardNumber}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-sov-light-alt font-mono">****-****-****-{card.cardNumber.last4}</p>
+                          <button
+                            onClick={() => handleRevealCard(card.id)}
+                            className="text-sov-purple hover:text-sov-pink text-xs flex items-center gap-1 transition-colors"
+                            title="Reveal full card number"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            Reveal
+                          </button>
+                        </div>
                       </div>
                     </div>
                     <div className="flex space-x-2">
@@ -569,7 +657,7 @@ export const CardManagementView: React.FC<CardManagementViewProps> = ({
                     <td className="p-3">
                       <div className="text-sov-light">{cards.find(c => c.id === transaction.cardId)?.assignedTo || 'Unknown'}</div>
                       <div className="text-sm text-sov-light-alt font-mono">
-                        {cards.find(c => c.id === transaction.cardId)?.cardNumber}
+                        ****-****-****-{cards.find(c => c.id === transaction.cardId)?.cardNumber.last4}
                       </div>
                     </td>
                     <td className="p-3">
@@ -608,7 +696,20 @@ export const CardManagementView: React.FC<CardManagementViewProps> = ({
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-sov-light-alt">Card Number</label>
-                  <p className="font-mono text-lg">{selectedCard.cardNumber}</p>
+                  <div className="flex items-center gap-3">
+                    <p className="font-mono text-lg">****-****-****-{selectedCard.cardNumber.last4}</p>
+                    <button
+                      onClick={() => handleRevealCard(selectedCard.id)}
+                      className="text-sov-purple hover:text-sov-pink text-sm flex items-center gap-1 transition-colors"
+                      title="Reveal full card number"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      Reveal
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-sov-light-alt">Card Type</label>
@@ -826,6 +927,117 @@ export const CardManagementView: React.FC<CardManagementViewProps> = ({
           </div>
         </form>
       </Modal>
+
+      {/* Card Reveal Modal */}
+      <Modal isOpen={showRevealModal} onClose={() => setShowRevealModal(false)} title="Reveal Card Number">
+        <div className="space-y-4">
+          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+            <div className="flex items-center space-x-2">
+              <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.96-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <h3 className="text-sm font-medium text-yellow-400">Security Notice</h3>
+            </div>
+            <p className="mt-2 text-sm text-yellow-300">
+              This action will reveal the full card number for security purposes. This access will be audited and the number will auto-hide after 60 seconds.
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="revealReason" className="block text-sm font-medium text-sov-light-alt mb-2">
+              Reason for Access <span className="text-red-400">*</span>
+            </label>
+            <select
+              id="revealReason"
+              value={revealReason}
+              onChange={(e) => setRevealReason(e.target.value)}
+              className="w-full bg-sov-dark border border-gray-600 rounded-md shadow-sm py-2 px-3 text-sov-light focus:outline-none focus:ring-sov-accent focus:border-sov-accent"
+            >
+              <option value="">Select a reason...</option>
+              <option value="Payment Processing">Payment Processing</option>
+              <option value="Dispute Resolution">Dispute Resolution</option>
+              <option value="Account Verification">Account Verification</option>
+              <option value="Compliance Review">Compliance Review</option>
+              <option value="Technical Support">Technical Support</option>
+              <option value="Security Investigation">Security Investigation</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={() => setShowRevealModal(false)}
+              className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={submitCardReveal}
+              disabled={!revealReason}
+              className="bg-sov-red text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              <span>Reveal Card Number</span>
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Revealed Card Number Overlay */}
+      {revealedCardData && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-sov-dark-alt border border-gray-700 rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="text-center space-y-4">
+              <div className="flex items-center justify-center space-x-2 text-sov-red">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                <h3 className="text-lg font-semibold">Card Number Revealed</h3>
+              </div>
+              
+              <div className="bg-gray-800 border border-gray-600 rounded-lg p-4">
+                <p className="text-2xl font-mono text-sov-light tracking-wider">{revealedCardData.fullNumber}</p>
+              </div>
+              
+              <div className="flex items-center justify-center space-x-4">
+                <button
+                  onClick={() => copyToClipboard(revealedCardData.fullNumber)}
+                  className="flex items-center space-x-2 text-sov-purple hover:text-sov-pink transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <span>Copy</span>
+                </button>
+                
+                <div className="flex items-center space-x-2 text-yellow-400">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{revealTimeRemaining}s remaining</span>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => setRevealedCardData(null)}
+                className="bg-sov-dark border border-gray-600 text-sov-light px-4 py-2 rounded-md hover:bg-gray-700 transition-colors"
+              >
+                Hide Now
+              </button>
+              
+              <p className="text-xs text-gray-400">
+                Audit ID: {revealedCardData.auditId}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

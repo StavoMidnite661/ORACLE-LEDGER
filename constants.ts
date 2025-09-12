@@ -340,7 +340,7 @@ export const mockVendors: Vendor[] = [
 export const mockCompanyCards: CompanyCard[] = [
   {
     id: 'CC-001',
-    cardNumber: '****-****-****-4721',
+    cardNumber: { last4: '4721', providerTokenId: 'visa_token_001' },
     cardType: 'Virtual',
     cardProvider: 'Visa',
     assignedTo: 'John Doe - Operations',
@@ -362,7 +362,7 @@ export const mockCompanyCards: CompanyCard[] = [
   },
   {
     id: 'CC-002',
-    cardNumber: '****-****-****-3892',
+    cardNumber: { last4: '3892', providerTokenId: 'mc_token_002' },
     cardType: 'Physical',
     cardProvider: 'Mastercard',
     assignedTo: 'Sarah Johnson - Marketing',
@@ -384,7 +384,7 @@ export const mockCompanyCards: CompanyCard[] = [
   },
   {
     id: 'CC-003',
-    cardNumber: '****-****-****-5647',
+    cardNumber: { last4: '5647', providerTokenId: 'visa_token_003' },
     cardType: 'Fleet',
     cardProvider: 'Visa',
     assignedTo: 'Fleet Operations',
@@ -406,7 +406,7 @@ export const mockCompanyCards: CompanyCard[] = [
   },
   {
     id: 'CC-004',
-    cardNumber: '****-****-****-1234',
+    cardNumber: { last4: '1234', providerTokenId: 'amex_token_004' },
     cardType: 'Virtual',
     cardProvider: 'Amex',
     assignedTo: 'Alex Chen - Engineering',
@@ -428,7 +428,7 @@ export const mockCompanyCards: CompanyCard[] = [
   },
   {
     id: 'CC-005',
-    cardNumber: '****-****-****-9876',
+    cardNumber: { last4: '9876', providerTokenId: 'visa_token_005' },
     cardType: 'Virtual',
     cardProvider: 'Visa',
     assignedTo: 'Corporate Expenses',

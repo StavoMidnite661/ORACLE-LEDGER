@@ -32,6 +32,9 @@ export interface JournalEntry {
   lines: JournalEntryLine[];
   source: 'CHAIN' | 'NACHA' | 'PO' | 'AR' | 'AP' | 'PURCHASE' | 'PAYROLL' | 'INTERCOMPANY' | 'PAYMENT';
   status: 'Posted' | 'Pending';
+  txHash?: string; // Blockchain transaction hash if from chain
+  blockNumber?: number; // Block number if from chain
+  chainConfirmations?: number; // Number of confirmations
 }
 
 export interface PurchaseOrder {
@@ -88,9 +91,14 @@ export interface Vendor {
     createdDate: string;
 }
 
+export interface CardNumber {
+  last4: string; // Last 4 digits for display
+  providerTokenId?: string; // Token reference for secure retrieval
+}
+
 export interface CompanyCard {
   id: string;
-  cardNumber: string; // Last 4 digits only for display
+  cardNumber: CardNumber; // Secure card number storage
   cardType: 'Virtual' | 'Physical' | 'Fleet' | 'Gas';
   cardProvider: 'Visa' | 'Mastercard' | 'Amex' | 'Discover';
   assignedTo?: string; // Employee ID or name
@@ -177,4 +185,70 @@ export enum View {
   CardManagement = 'CARD_MANAGEMENT',
   Payroll = 'PAYROLL',
   Settings = 'SETTINGS',
+}
+
+// Security and Audit Types
+export enum UserRole {
+  Admin = 'Admin',
+  Finance = 'Finance',
+  Auditor = 'Auditor',
+  Viewer = 'Viewer',
+}
+
+export interface AuditEvent {
+  id: string;
+  timestamp: string;
+  actor: string; // User ID or name
+  action: 'CARD_NUMBER_REVEALED' | 'CARD_CREATED' | 'CARD_SUSPENDED' | 'CARD_ACTIVATED' | 'SETTINGS_CHANGED' | 'BLOCKCHAIN_EVENT';
+  targetId: string; // Card ID, Transaction ID, etc.
+  reason?: string;
+  result: 'SUCCESS' | 'FAILED' | 'UNAUTHORIZED';
+  ip?: string;
+  userAgent?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface CardRevealRequest {
+  cardId: string;
+  reason: string;
+  authCode?: string; // MFA code
+}
+
+export interface CardRevealResponse {
+  fullNumber: string;
+  expiresAt: string; // ISO timestamp when reveal expires
+  auditId: string;
+}
+
+// Blockchain and Smart Contract Types
+export interface ChainSettings {
+  rpcUrl: string;
+  contractAddress: string;
+  chainId: number;
+  confirmations: number;
+  lastProcessedBlock: number;
+  isEnabled: boolean;
+}
+
+export interface BlockchainEvent {
+  id: string;
+  txHash: string;
+  blockNumber: number;
+  logIndex: number;
+  eventType: 'LEDGER_POSTED' | 'TOKEN_TRANSFER' | 'TOKEN_MINT' | 'TOKEN_BURN';
+  contractAddress: string;
+  chainId: number;
+  confirmations: number;
+  status: 'PENDING' | 'CONFIRMED' | 'FAILED';
+  eventData: Record<string, any>;
+  journalEntryId?: string;
+  processedAt?: string;
+  createdAt: string;
+}
+
+export interface SmartContractMapping {
+  eventType: string;
+  accountMapping: Record<string, number>; // Map event params to account IDs
+  description: string;
+  enabled: boolean;
 }
