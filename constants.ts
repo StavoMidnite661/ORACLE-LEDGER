@@ -618,7 +618,7 @@ export const mockConsulCreditsConfig: ConsulCreditsConfig = {
   rpcUrl: 'https://rpc.sepolia.org', // Public testnet RPC
   oracleIntegratorAddress: '0x1234567890AbcdEF1234567890aBcdef12345678', // Fixed checksum
   confirmationsRequired: 3,
-  isEnabled: false, // Disabled by default since contract isn't deployed
+  isEnabled: true, // Enabled for production deployment
 };
 
 export const mockSupportedTokens: SupportedToken[] = [
