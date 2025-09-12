@@ -11,10 +11,11 @@ import { AccountsPayableView } from './views/AccountsPayableView';
 import { VendorPaymentsView } from './views/VendorPaymentsView';
 import { VendorManagementView } from './views/VendorManagementView';
 import { CardManagementView } from './views/CardManagementView';
+import { ConsulCreditsView } from './views/ConsulCreditsView';
 import { PayrollView } from './views/PayrollView';
 import { SettingsView } from './views/SettingsView';
-import { mockJournalEntries, mockPurchaseOrders, mockInvoices, mockEmployees, mockVendors, mockCompanyCards, mockCardTransactions } from './constants';
-import type { JournalEntry, PurchaseOrder, Invoice, Employee, Vendor, CompanyCard, CardTransaction } from './types';
+import { mockJournalEntries, mockPurchaseOrders, mockInvoices, mockEmployees, mockVendors, mockCompanyCards, mockCardTransactions, mockConsulCreditsConfig, mockSupportedTokens, mockConsulCreditsTransactions } from './constants';
+import type { JournalEntry, PurchaseOrder, Invoice, Employee, Vendor, CompanyCard, CardTransaction, ConsulCreditsConfig, SupportedToken, ConsulCreditsTransaction, ConsulCreditsStats } from './types';
 import { View } from './types';
 import { Modal } from './components/shared/Modal';
 
@@ -28,6 +29,23 @@ const App: React.FC = () => {
   const [vendors, setVendors] = useState<Vendor[]>(mockVendors);
   const [companyCards, setCompanyCards] = useState<CompanyCard[]>(mockCompanyCards);
   const [cardTransactions] = useState<CardTransaction[]>(mockCardTransactions);
+  const [consulCreditsConfig, setConsulCreditsConfig] = useState<ConsulCreditsConfig>(mockConsulCreditsConfig);
+  const [supportedTokens] = useState<SupportedToken[]>(mockSupportedTokens);
+  const [consulCreditsTransactions] = useState<ConsulCreditsTransaction[]>(mockConsulCreditsTransactions);
+  
+  // Mock consul credits stats
+  const consulCreditsStats: ConsulCreditsStats = useMemo(() => ({
+    totalSupply: '67000.000000000000000000',
+    totalUniqueHolders: 5,
+    totalTransactions: consulCreditsTransactions.length,
+    supportedTokensCount: supportedTokens.filter(t => t.isActive).length,
+    contractReserves: supportedTokens.map(token => ({
+      tokenAddress: token.address,
+      tokenSymbol: token.symbol,
+      balance: (parseFloat(token.totalDeposited) - parseFloat(token.totalWithdrawn)).toString(),
+      value: (parseFloat(token.totalDeposited) - parseFloat(token.totalWithdrawn)).toString()
+    }))
+  }), [consulCreditsTransactions, supportedTokens]);
 
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -131,6 +149,10 @@ const App: React.FC = () => {
     ));
   };
 
+  const updateConsulCreditsConfig = (updates: Partial<ConsulCreditsConfig>) => {
+    setConsulCreditsConfig(prev => ({ ...prev, ...updates }));
+  };
+
   const renderView = () => {
     switch (activeView) {
       case View.Dashboard:
@@ -169,6 +191,14 @@ const App: React.FC = () => {
                     transactions={cardTransactions}
                     addCard={addCompanyCard}
                     updateCard={updateCompanyCard}
+                />;
+      case View.ConsulCredits:
+        return <ConsulCreditsView 
+                    config={consulCreditsConfig}
+                    supportedTokens={supportedTokens}
+                    transactions={consulCreditsTransactions}
+                    stats={consulCreditsStats}
+                    updateConfig={updateConsulCreditsConfig}
                 />;
       case View.Payroll:
         return <PayrollView employees={employees} addEmployee={addEmployee} addJournalEntry={addJournalEntry} />;

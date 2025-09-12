@@ -183,6 +183,7 @@ export enum View {
   VendorPayments = 'VENDOR_PAYMENTS',
   VendorManagement = 'VENDOR_MANAGEMENT',
   CardManagement = 'CARD_MANAGEMENT',
+  ConsulCredits = 'CONSUL_CREDITS',
   Payroll = 'PAYROLL',
   Settings = 'SETTINGS',
 }
