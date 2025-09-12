@@ -672,6 +672,61 @@ export const mockSupportedTokens: SupportedToken[] = [
     totalDeposited: '20000000000000000000', // 20 WETH
     totalWithdrawn: '5000000000000000000', // 5 WETH
   },
+  // ECHO Token (Contract 1)
+  {
+    address: '0xf3C7EC2c667483E3cBC2B24056A22a904904495',
+    symbol: 'ECHO',
+    name: 'Echo Token',
+    decimals: 18,
+    exchangeRate: '1000000000000000000', // 1 ECHO = 1 Consul Credit
+    isActive: true,
+    totalDeposited: '2000000000000000000000000', // 2,000,000 ECHO
+    totalWithdrawn: '0',
+  },
+  // ECHO Token (Contract 2)
+  {
+    address: '0xa7474b66df12548c1A7574E2394455586A1f2280',
+    symbol: 'ECHO',
+    name: 'Echo Token',
+    decimals: 18,
+    exchangeRate: '1000000000000000000', // 1 ECHO = 1 Consul Credit
+    isActive: true,
+    totalDeposited: '2000000000000000000000000', // 2,000,000 ECHO
+    totalWithdrawn: '0',
+  },
+  // ECHO Token (Contract 3)
+  {
+    address: '0x37F44F09B3F69eFF1Ca09903408C24161ae5EC62',
+    symbol: 'ECHO',
+    name: 'Echo Token',
+    decimals: 18,
+    exchangeRate: '1000000000000000000', // 1 ECHO = 1 Consul Credit
+    isActive: true,
+    totalDeposited: '2000000000000000000000000', // 2,000,000 ECHO
+    totalWithdrawn: '0',
+  },
+  // SPRK Token
+  {
+    address: '0x6AD4E07dFBa279CA5B4DeCE9cDc3028aec63Be56',
+    symbol: 'SPRK',
+    name: 'Spark Token',
+    decimals: 18,
+    exchangeRate: '1000000000000000000', // 1 SPRK = 1 Consul Credit
+    isActive: true,
+    totalDeposited: '10000000000000000000000000', // 10,000,000 SPRK
+    totalWithdrawn: '0',
+  },
+  // SOVR Token
+  {
+    address: '0x98972Dee56F2cdeaF8157bDedd59e49D95e49B7726',
+    symbol: 'SOVR',
+    name: 'SOVR Development Token',
+    decimals: 18,
+    exchangeRate: '1000000000000000000', // 1 SOVR = 1 Consul Credit
+    isActive: true,
+    totalDeposited: '500000000000000000000000', // 500,000 SOVR
+    totalWithdrawn: '0',
+  },
 ];
 
 export const mockConsulCreditsTransactions: ConsulCreditsTransaction[] = [
