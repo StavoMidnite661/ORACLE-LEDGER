@@ -46,22 +46,15 @@ function mapSpendCategory(dbCategory: string): SpendCategory {
 
 // Map TypeScript SpendCategory to database enum
 function mapSpendCategoryToDb(category: SpendCategory): string {
-  const categoryMap: Record<SpendCategory, string> = {
-    [SpendCategory.Fuel]: 'Fuel',
-    [SpendCategory.Office]: 'Office',
-    [SpendCategory.Travel]: 'Travel',
-    [SpendCategory.Software]: 'Software',
-    [SpendCategory.Equipment]: 'Hardware',
-    [SpendCategory.Marketing]: 'Other',
-    [SpendCategory.Meals]: 'Other',
-    [SpendCategory.Maintenance]: 'Other',
-    [SpendCategory.Professional]: 'Other',
-    [SpendCategory.Utilities]: 'Other',
-    [SpendCategory.Training]: 'Other',
-    [SpendCategory.Insurance]: 'Other',
-    [SpendCategory.Other]: 'Other'
-  };
-  return categoryMap[category] || 'Other';
+  // Map based on enum values, not keys
+  switch (category) {
+    case SpendCategory.Fuel: return 'Fuel';
+    case SpendCategory.Office: return 'Office';
+    case SpendCategory.Travel: return 'Travel';
+    case SpendCategory.Software: return 'Software';
+    case SpendCategory.Equipment: return 'Hardware';
+    default: return 'Other';
+  }
 }
 
 // Convert database employee to TypeScript Employee
@@ -446,7 +439,7 @@ app.post('/api/card-transactions', async (req, res) => {
         id,
         cardId: transaction.cardId,
         merchantName: transaction.merchantName,
-        merchantCategory: mapSpendCategoryToDb(transaction.merchantCategory),
+        merchantCategory: mapSpendCategoryToDb(transaction.merchantCategory) as any,
         amount: transaction.amount.toString(),
         currency: transaction.currency,
         transactionDate: transaction.transactionDate,
