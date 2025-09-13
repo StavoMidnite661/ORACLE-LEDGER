@@ -84,7 +84,7 @@ export const companyCards = pgTable('company_cards', {
   spendingLimitTransaction: numeric('spending_limit_transaction', { precision: 15, scale: 2 }),
   status: varchar('status', { length: 20 }).notNull().default('Active'),
   issueDate: varchar('issue_date', { length: 10 }).notNull(),
-  expiryDate: varchar('expiry_date', { length: 7 }).notNull(),
+  expiryDate: varchar('expiry_date', { length: 10 }).notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 });
 
