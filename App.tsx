@@ -60,6 +60,21 @@ const App: React.FC = () => {
   // Counter for unique journal entry IDs (start high to avoid conflicts with mock data)
   const [journalCounter, setJournalCounter] = React.useState(1000);
 
+  const intercompanyPayableBalance = useMemo(() => {
+    return journalEntries.reduce((balance, entry) => {
+      const payableLine = entry.lines.find(line => line.accountId === 2200); // 2200: Intercompany-Payable-LLC
+      if (payableLine) {
+        if (payableLine.type === 'CREDIT') {
+          return balance + payableLine.amount;
+        }
+        if (payableLine.type === 'DEBIT') {
+          return balance - payableLine.amount;
+        }
+      }
+      return balance;
+    }, 0);
+  }, [journalEntries]);
+
   const addJournalEntry = async (entry: Omit<JournalEntry, 'id' | 'date'>) => {
     try {
       const newEntry = await apiService.addJournalEntry(entry);
@@ -321,6 +336,7 @@ const App: React.FC = () => {
                     purchaseOrders={purchaseOrders}
                     arInvoices={arInvoices}
                     apInvoices={apInvoices}
+                    intercompanyPayableBalance={intercompanyPayableBalance}
                 />;
       case View.Journal:
         return <JournalView journalEntries={journalEntries} addJournalEntry={addJournalEntry} />;
@@ -370,6 +386,7 @@ const App: React.FC = () => {
                     purchaseOrders={purchaseOrders}
                     arInvoices={arInvoices}
                     apInvoices={apInvoices}
+                    intercompanyPayableBalance={intercompanyPayableBalance}
                 />;
     }
   };

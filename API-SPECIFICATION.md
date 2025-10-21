@@ -1,344 +1,450 @@
 # SOVRCVLT ORACLE-LEDGER API Specification
 
-## Server Architecture
+This document outlines the API endpoints for the SOVRCVLT ORACLE-LEDGER application.
 
-### Technology Stack
-- **Runtime**: Node.js 20+ with TypeScript
-- **Framework**: Express.js
-- **Database**: PostgreSQL 16+ (with Drizzle ORM)
-- **Port**: 3001 (configurable via API_PORT env variable)
+## Base URL
 
-### Environment Variables Required
-```bash
-DATABASE_URL=postgresql://user:password@host:port/database
-API_PORT=3001  # Optional, defaults to 3001
-GEMINI_API_KEY=your_gemini_api_key  # For AI features
-```
+The base URL for all API endpoints is `/api`.
 
-## API Endpoints
+## Authentication
 
-### Health Check
-```
-GET /api/health
-Response: { status: "OK", timestamp: "2025-10-01T12:00:00.000Z" }
-```
+Currently, there is no authentication required to access the API endpoints.
+
+## Endpoints
 
 ### Employees
 
-#### Get All Employees
-```
-GET /api/employees
-Response: Employee[]
-```
+*   **GET /api/employees**
 
-#### Create Employee
-```
-POST /api/employees
-Body: {
-  name: string,
-  annualSalary: number,
-  bankRoutingNumber?: string,
-  bankAccountNumber?: string,
-  paymentMethod: 'ACH' | 'Wire' | 'Crypto',
-  taxId?: string
-}
-Response: Employee
-```
+    *   Description: Retrieves a list of all employees.
+    *   Response:
 
-#### Update Employee
-```
-PUT /api/employees/:id
-Body: Employee
-Response: Employee
-```
+        ```json
+        [
+          {
+            "id": "EMP-1672532400000",
+            "name": "John Doe",
+            "annualSalary": 80000,
+            "bankRoutingNumber": "123456789",
+            "bankAccountNumber": "987654321",
+            "paymentMethod": "ACH",
+            "taxId": "12-3456789"
+          }
+        ]
+        ```
 
-### Journal Entries (Double-Entry Bookkeeping)
+*   **POST /api/employees**
 
-#### Get All Journal Entries
-```
-GET /api/journal-entries
-Response: JournalEntry[]
-```
+    *   Description: Creates a new employee.
+    *   Request Body:
 
-#### Create Journal Entry
-```
-POST /api/journal-entries
-Body: {
-  description: string,
-  source: string,
-  status: string,
-  lines: [
-    {
-      accountId: number,
-      type: 'DEBIT' | 'CREDIT',
-      amount: number
-    }
-  ]
-}
-Response: JournalEntry
-Auto-generates: id (JE-XXXXXX), date (current date)
-```
+        ```json
+        {
+          "name": "Jane Smith",
+          "annualSalary": 90000,
+          "bankRoutingNumber": "123456789",
+          "bankAccountNumber": "123456789",
+          "paymentMethod": "Wire",
+          "taxId": "98-7654321"
+        }
+        ```
+
+*   **PUT /api/employees/:id**
+
+    *   Description: Updates an existing employee.
+    *   Request Body:
+
+        ```json
+        {
+          "name": "Jane Smith",
+          "annualSalary": 95000
+        }
+        ```
+
+### Journal Entries
+
+*   **GET /api/journal-entries**
+
+    *   Description: Retrieves a list of all journal entries.
+    *   Response:
+
+        ```json
+        [
+          {
+            "id": "JE-123456",
+            "date": "2023-01-01",
+            "description": "Initial funding",
+            "source": "CHAIN",
+            "status": "Posted",
+            "lines": [
+              {
+                "accountId": 1,
+                "type": "DEBIT",
+                "amount": 10000
+              },
+              {
+                "accountId": 2,
+                "type": "CREDIT",
+                "amount": 10000
+              }
+            ]
+          }
+        ]
+        ```
+
+*   **POST /api/journal-entries**
+
+    *   Description: Creates a new journal entry.
+    *   Request Body:
+
+        ```json
+        {
+          "description": "Office supplies purchase",
+          "source": "PURCHASE",
+          "status": "Pending",
+          "lines": [
+            {
+              "accountId": 10,
+              "type": "DEBIT",
+              "amount": 250
+            },
+            {
+              "accountId": 1,
+              "type": "CREDIT",
+              "amount": 250
+            }
+          ]
+        }
+        ```
 
 ### Vendors
 
-#### Get All Vendors
-```
-GET /api/vendors
-Response: Vendor[]
-```
+*   **GET /api/vendors**
 
-#### Create Vendor
-```
-POST /api/vendors
-Body: {
-  name: string,
-  contactPerson: string,
-  email: string,
-  phone: string,
-  address: string,
-  paymentTerms: string,
-  bankAccountNumber?: string,
-  bankRoutingNumber?: string,
-  taxId: string,
-  status: 'Active' | 'Inactive',
-  category: 'Software' | 'Hardware' | 'Services' | 'Supplies' | 'Professional' | 'Other',
-  notes?: string
-}
-Response: Vendor
-Auto-generates: id (VEN-timestamp)
-```
+    *   Description: Retrieves a list of all vendors.
+    *   Response:
+
+        ```json
+        [
+          {
+            "id": "VEN-1672532400000",
+            "name": "Office Supplies Inc.",
+            "contactPerson": "John Smith",
+            "email": "john@officesupplies.com",
+            "phone": "123-456-7890",
+            "address": "123 Main St, Anytown, USA",
+            "paymentTerms": "Net 30",
+            "bankAccountNumber": "123456789",
+            "bankRoutingNumber": "987654321",
+            "taxId": "12-3456789",
+            "status": "Active",
+            "category": "Supplies",
+            "notes": "",
+            "createdDate": "2023-01-01"
+          }
+        ]
+        ```
+
+*   **POST /api/vendors**
+
+    *   Description: Creates a new vendor.
+    *   Request Body:
+
+        ```json
+        {
+          "name": "New Vendor",
+          "contactPerson": "Jane Doe",
+          "email": "jane@newvendor.com",
+          "phone": "098-765-4321",
+          "address": "456 Oak Ave, Anytown, USA",
+          "paymentTerms": "Net 60",
+          "bankAccountNumber": "987654321",
+          "bankRoutingNumber": "123456789",
+          "taxId": "98-7654321",
+          "status": "Active",
+          "category": "Services",
+          "notes": "New vendor for consulting services"
+        }
+        ```
 
 ### Company Cards
 
-#### Get All Cards
-```
-GET /api/company-cards
-Response: CompanyCard[]
-```
+*   **GET /api/company-cards**
 
-#### Create Card
-```
-POST /api/company-cards
-Body: {
-  cardNumber: {
-    last4: string,
-    providerTokenId?: string
-  },
-  cardType: 'Virtual' | 'Physical' | 'Fleet' | 'Gas',
-  cardProvider: 'Visa' | 'Mastercard' | 'Amex' | 'Discover',
-  assignedTo?: string,
-  dailyLimit: number,
-  monthlyLimit: number,
-  transactionLimit: number,
-  status: 'Active' | 'Suspended' | 'Cancelled',
-  issueDate: string (YYYY-MM-DD),
-  expirationDate: string (YYYY-MM-DD)
-}
-Response: CompanyCard
-Auto-generates: id (CARD-timestamp)
-```
+    *   Description: Retrieves a list of all company cards.
+    *   Response:
 
-#### Update Card
-```
-PUT /api/company-cards/:id
-Body: CompanyCard
-Response: CompanyCard
-```
+        ```json
+        [
+          {
+            "id": "CARD-1672532400000",
+            "cardNumber": {
+              "last4": "1234",
+              "providerTokenId": "tok_1234567890"
+            },
+            "cardType": "Virtual",
+            "cardProvider": "Visa",
+            "assignedTo": "EMP-1672532400000",
+            "assignedEntity": "SOVR Development Holdings LLC",
+            "status": "Active",
+            "monthlyLimit": 5000,
+            "dailyLimit": 1000,
+            "transactionLimit": 500,
+            "spentThisMonth": 0,
+            "spentThisQuarter": 0,
+            "spentThisYear": 0,
+            "allowedCategories": [],
+            "blockedCategories": [],
+            "expirationDate": "12/25",
+            "issueDate": "2023-01-01",
+            "billingAddress": "123 Main St, Anytown, USA"
+          }
+        ]
+        ```
+
+*   **POST /api/company-cards**
+
+    *   Description: Creates a new company card.
+    *   Request Body:
+
+        ```json
+        {
+          "cardNumber": {
+            "last4": "5678",
+            "providerTokenId": "tok_0987654321"
+          },
+          "cardType": "Physical",
+          "cardProvider": "Mastercard",
+          "assignedTo": "EMP-1672532400001",
+          "assignedEntity": "SOVR Development Holdings LLC",
+          "status": "Active",
+          "monthlyLimit": 10000,
+          "dailyLimit": 2000,
+          "transactionLimit": 1000,
+          "expirationDate": "12/26",
+          "issueDate": "2023-01-01",
+          "billingAddress": "123 Main St, Anytown, USA"
+        }
+        ```
+
+*   **PUT /api/company-cards/:id**
+
+    *   Description: Updates an existing company card.
+    *   Request Body:
+
+        ```json
+        {
+          "status": "Suspended"
+        }
+        ```
 
 ### Card Transactions
 
-#### Get All Transactions
-```
-GET /api/card-transactions
-Response: CardTransaction[]
-```
+*   **GET /api/card-transactions**
 
-#### Create Transaction
-```
-POST /api/card-transactions
-Body: {
-  cardId: string,
-  merchantName: string,
-  merchantCategory: 'Fuel' | 'Office' | 'Travel' | 'Software' | 'Equipment' | 'Other',
-  amount: number,
-  currency: string,
-  transactionDate: string (YYYY-MM-DD),
-  postingDate: string (YYYY-MM-DD),
-  description: string,
-  status: string,
-  location?: string,
-  accountingCode?: string,
-  notes?: string
-}
-Response: CardTransaction
-Auto-generates: id (TXN-timestamp)
-```
+    *   Description: Retrieves a list of all card transactions.
+    *   Response:
+
+        ```json
+        [
+          {
+            "id": "TXN-1672532400000",
+            "cardId": "CARD-1672532400000",
+            "merchantName": "Amazon.com",
+            "merchantCategory": "Software",
+            "amount": 49.99,
+            "currency": "USD",
+            "transactionDate": "2023-01-02",
+            "postingDate": "2023-01-03",
+            "description": "AWS Services",
+            "status": "Posted",
+            "location": "Online",
+            "accountingCode": "6010",
+            "notes": "Monthly AWS bill"
+          }
+        ]
+        ```
+
+*   **POST /api/card-transactions**
+
+    *   Description: Creates a new card transaction.
+    *   Request Body:
+
+        ```json
+        {
+          "cardId": "CARD-1672532400000",
+          "merchantName": "Starbucks",
+          "merchantCategory": "Meals",
+          "amount": 5.99,
+          "currency": "USD",
+          "transactionDate": "2023-01-03",
+          "postingDate": "2023-01-04",
+          "description": "Coffee",
+          "status": "Posted",
+          "location": "Anytown, USA",
+          "accountingCode": "6015",
+          "notes": ""
+        }
+        ```
 
 ### Purchase Orders
 
-#### Get All Purchase Orders
-```
-GET /api/purchase-orders
-Response: PurchaseOrder[]
-```
+*   **GET /api/purchase-orders**
 
-#### Create Purchase Order
-```
-POST /api/purchase-orders
-Body: {
-  vendor: string,
-  items: [
-    {
-      description: string,
-      amount: number
-    }
-  ],
-  totalAmount: number,
-  status: 'Draft' | 'Approved' | 'Fulfilled'
-}
-Response: PurchaseOrder
-Auto-generates: id (PO-timestamp), date (current date)
-```
+    *   Description: Retrieves a list of all purchase orders.
+    *   Response:
 
-### Invoices (AR/AP)
+        ```json
+        [
+          {
+            "id": "PO-1672532400000",
+            "vendor": "Office Supplies Inc.",
+            "date": "2023-01-04",
+            "items": [
+              {
+                "description": "Paper",
+                "amount": 50
+              },
+              {
+                "description": "Pens",
+                "amount": 20
+              }
+            ],
+            "totalAmount": 70,
+            "status": "Approved"
+          }
+        ]
+        ```
 
-#### Get All Invoices
-```
-GET /api/invoices
-Response: Invoice[]
-```
+*   **POST /api/purchase-orders**
 
-#### Create Invoice
-```
-POST /api/invoices
-Body: {
-  type: 'AR' | 'AP',
-  counterparty: string,
-  dueDate: string (YYYY-MM-DD),
-  amount: number,
-  status: 'Issued' | 'Paid' | 'Overdue'
-}
-Response: Invoice
-Auto-generates: id (INV-AR-timestamp or INV-AP-timestamp), issueDate (current date)
-```
+    *   Description: Creates a new purchase order.
+    *   Request Body:
 
-#### Update Invoice
-```
-PUT /api/invoices/:id
-Body: Partial<Invoice>
-Response: Invoice
-```
+        ```json
+        {
+          "vendor": "New Vendor",
+          "items": [
+            {
+              "description": "Consulting services",
+              "amount": 5000
+            }
+          ],
+          "totalAmount": 5000,
+          "status": "Draft"
+        }
+        ```
 
-### Consul Credits (Blockchain)
+### Invoices
 
-#### Get All Blockchain Transactions
-```
-GET /api/consul-credits-transactions
-Response: ConsulCreditsTransaction[]
-```
+*   **GET /api/invoices**
 
-#### Create Blockchain Transaction
-```
-POST /api/consul-credits-transactions
-Body: {
-  txHash: string,
-  blockNumber: number,
-  timestamp: Date,
-  eventType: string,
-  userAddress: string,
-  tokenAddress: string,
-  tokenSymbol: string,
-  tokenAmount: string,
-  consulCreditsAmount: string,
-  exchangeRate: string,
-  ledgerReference?: string,
-  journalEntryId?: string,
-  confirmations: number,
-  status: string
-}
-Response: ConsulCreditsTransaction
-Auto-generates: id (CC-timestamp)
-```
+    *   Description: Retrieves a list of all invoices.
+    *   Response:
 
-## Type Conversion Logic
+        ```json
+        [
+          {
+            "id": "INV-AR-1672532400000",
+            "type": "AR",
+            "counterparty": "Client A",
+            "issueDate": "2023-01-05",
+            "dueDate": "2023-02-04",
+            "amount": 10000,
+            "status": "Issued"
+          }
+        ]
+        ```
 
-### Numeric Fields
-All PostgreSQL NUMERIC fields are stored as strings in DB and converted to numbers in API:
-```typescript
-function parseNumeric(value: string | number): number {
-  return typeof value === 'string' ? parseFloat(value) : value;
-}
-```
+*   **POST /api/invoices**
 
-### Date Formatting
-```typescript
-function formatDateToISO(date: Date): string {
-  return date.toISOString().split('T')[0];
-}
-```
+    *   Description: Creates a new invoice.
+    *   Request Body:
 
-### Spend Category Mapping
-Database ENUMs → TypeScript ENUMs:
-- 'Fuel' → SpendCategory.Fuel
-- 'Office' → SpendCategory.Office
-- 'Travel' → SpendCategory.Travel
-- 'Software' → SpendCategory.Software
-- 'Hardware' → SpendCategory.Equipment
-- 'Other' → SpendCategory.Other
+        ```json
+        {
+          "type": "AP",
+          "counterparty": "Vendor B",
+          "dueDate": "2023-02-05",
+          "amount": 2500,
+          "status": "Issued"
+        }
+        ```
 
-## CORS Configuration
-```typescript
-app.use(cors());  // Allows all origins for development
-```
+*   **PUT /api/invoices/:id**
 
-## Error Handling
-All endpoints return:
-```json
-{
-  "error": "Error message description"
-}
-```
-with HTTP 500 status code on failure.
+    *   Description: Updates an existing invoice.
+    *   Request Body:
 
-## How to Run Locally
+        ```json
+        {
+          "status": "Paid"
+        }
+        ```
 
-### 1. Install Dependencies
-```bash
-npm install
-```
+### Consul Credits Transactions
 
-### 2. Setup Database
-```bash
-# Create PostgreSQL database
-# Set DATABASE_URL environment variable
+*   **GET /api/consul-credits-transactions**
 
-# Push schema to database
-npm run db:push
-```
+    *   Description: Retrieves a list of all Consul Credits transactions.
+    *   Response:
 
-### 3. Start API Server
-```bash
-# Development mode (with auto-reload)
-npm run dev:backend
+        ```json
+        [
+          {
+            "id": "CC-1672532400000",
+            "txHash": "0x123...",
+            "blockNumber": 123456,
+            "timestamp": "2023-01-06T12:00:00.000Z",
+            "eventType": "DEPOSIT",
+            "userAddress": "0xabc...",
+            "tokenAddress": "0xdef...",
+            "tokenSymbol": "ETH",
+            "tokenAmount": "1000000000000000000",
+            "consulCreditsAmount": "1000",
+            "exchangeRate": "1000",
+            "ledgerReference": "JE-654321",
+            "journalEntryId": "JE-654321",
+            "confirmations": 12,
+            "status": "CONFIRMED"
+          }
+        ]
+        ```
 
-# Production mode
-node --loader tsx server/api.ts
-```
+*   **POST /api/consul-credits-transactions**
 
-### 4. Test API
-```bash
-curl http://localhost:3001/api/health
-```
+    *   Description: Creates a new Consul Credits transaction.
+    *   Request Body:
 
-## Database Schema
-See `database-schema.sql` for complete PostgreSQL DDL including:
-- 14 tables with relationships
-- 9 custom ENUM types
-- Foreign key constraints
-- Performance indexes
-- Audit trails
+        ```json
+        {
+          "txHash": "0x456...",
+          "blockNumber": 654321,
+          "timestamp": "2023-01-07T12:00:00.000Z",
+          "eventType": "WITHDRAW",
+          "userAddress": "0x123...",
+          "tokenAddress": "0x456...",
+          "tokenSymbol": "USDC",
+          "tokenAmount": "500000000",
+          "consulCreditsAmount": "500",
+          "exchangeRate": "1",
+          "ledgerReference": "JE-123456",
+          "journalEntryId": "JE-123456",
+          "confirmations": 0,
+          "status": "PENDING"
+        }
+        ```
 
-## Frontend Integration
-Frontend makes fetch calls to: `http://localhost:3001/api/*`
+### Health
 
-All responses are JSON format with proper type conversions applied.
+*   **GET /api/health**
+
+    *   Description: Checks the health of the API.
+    *   Response:
+
+        ```json
+        {
+          "status": "OK",
+          "timestamp": "2023-01-01T00:00:00.000Z"
+        }
+        ```

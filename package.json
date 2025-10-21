@@ -5,12 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "api": "tsx server/api.ts",
     "dev:backend": "tsx server/api.ts",
     "dev:full": "concurrently \"npm run dev\" \"npm run dev:backend\"",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0 --port ${PORT:-5000}",
-    "start": "concurrently \"vite preview --host 0.0.0.0 --port ${PORT:-5000}\" \"npm run api\"",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },
@@ -22,7 +19,6 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/ws": "^8.18.1",
-    "better-sqlite3": "^12.4.1",
     "body-parser": "^2.2.0",
     "concurrently": "^9.2.1",
     "cors": "^2.8.5",

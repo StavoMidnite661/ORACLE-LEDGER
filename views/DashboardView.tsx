@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { KpiCard } from '../components/shared/KpiCard';
 import { analyzeFinancials } from '../services/geminiService';
@@ -12,9 +13,10 @@ interface DashboardViewProps {
     arInvoices: Invoice[];
     apInvoices: Invoice[];
     addJournalEntry: (entry: Omit<JournalEntry, 'id' | 'date'>) => void;
+    intercompanyPayableBalance: number;
 }
 
-export const DashboardView: React.FC<DashboardViewProps> = ({ journalEntries, purchaseOrders, arInvoices, apInvoices, addJournalEntry }) => {
+export const DashboardView: React.FC<DashboardViewProps> = ({ journalEntries, purchaseOrders, arInvoices, apInvoices, addJournalEntry, intercompanyPayableBalance }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState('');
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
@@ -91,21 +93,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ journalEntries, pu
   
   const getAccountName = (id: number) => CHART_OF_ACCOUNTS.find(acc => acc.id === id)?.name || 'Unknown Account';
 
-  const intercompanyBalance = useMemo(() => {
-    return journalEntries.reduce((balance, entry) => {
-      const payableLine = entry.lines.find(line => line.accountId === 2200); // 2200: Intercompany-Payable-LLC
-      if (payableLine) {
-        if (payableLine.type === 'CREDIT') {
-          return balance + payableLine.amount;
-        }
-        if (payableLine.type === 'DEBIT') {
-          return balance - payableLine.amount;
-        }
-      }
-      return balance;
-    }, 0);
-  }, [journalEntries]);
-  
   const tokenTransactions = useMemo(() => {
     return journalEntries
       .filter(entry => entry.lines.some(line => line.accountId === 1010)) // 1010: Cash-Vault-USDC
@@ -123,14 +110,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ journalEntries, pu
   }, [journalEntries]);
 
   const handleSettle = () => {
-      if (intercompanyBalance <= 0) return;
+      if (intercompanyPayableBalance <= 0) return;
       addJournalEntry({
           description: 'Netting of Intercompany Balances',
           source: 'INTERCOMPANY',
           status: 'Posted',
           lines: [
-              { accountId: 2200, type: 'DEBIT', amount: intercompanyBalance },
-              { accountId: 1200, type: 'CREDIT', amount: intercompanyBalance },
+              { accountId: 2200, type: 'DEBIT', amount: intercompanyPayableBalance },
+              { accountId: 1200, type: 'CREDIT', amount: intercompanyPayableBalance },
           ]
       });
       setIsSettleModalOpen(false);
@@ -194,8 +181,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ journalEntries, pu
         <KpiCard title="Accounts Receivable" value={`$${financialMetrics.totalAR.toLocaleString()}`} icon={<ARIcon />} />
         <KpiCard title="Accounts Payable" value={`$${financialMetrics.totalAP.toLocaleString()}`} icon={<APIcon />} />
         <div className="relative">
-             <KpiCard title="Intercompany Payable" value={`$${intercompanyBalance.toLocaleString()}`} icon={<IntercompanyIcon />} />
-             {intercompanyBalance > 0 && (
+             <KpiCard title="Intercompany Payable" value={`$${intercompanyPayableBalance.toLocaleString()}`} icon={<IntercompanyIcon />} />
+             {intercompanyPayableBalance > 0 && (
                 <button 
                     onClick={() => setIsSettleModalOpen(true)}
                     className="absolute top-4 right-4 bg-sov-gold text-sov-dark font-bold text-xs py-1 px-3 rounded-full hover:bg-yellow-400 transition-colors"
@@ -333,7 +320,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ journalEntries, pu
 
       <Modal isOpen={isSettleModalOpen} onClose={() => setIsSettleModalOpen(false)} title="Settle Intercompany Balance">
         <div className="text-sov-light space-y-4">
-            <p>You are about to settle the intercompany payable balance of <strong className="text-sov-gold">${intercompanyBalance.toLocaleString()}</strong>.</p>
+            <p>You are about to settle the intercompany payable balance of <strong className="text-sov-gold">${intercompanyPayableBalance.toLocaleString()}</strong>.</p>
             <p>This will create a journal entry to debit <strong className="text-sov-light-alt">2200-Intercompany-Payable-LLC</strong> and credit <strong className="text-sov-light-alt">1200-Intercompany-Receivable-Trust</strong>, netting the balances to zero.</p>
             <div className="flex justify-end pt-4 space-x-2">
                 <button type="button" onClick={() => setIsSettleModalOpen(false)} className="bg-sov-dark-alt border border-gray-600 text-sov-light font-bold py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors">Cancel</button>
