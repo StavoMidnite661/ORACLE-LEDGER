@@ -1,3 +1,4 @@
+
 import express from 'express';
 import cors from 'cors';
 import { db } from './db';
@@ -280,31 +281,34 @@ app.post('/api/journal-entries', async (req, res) => {
     const id = `JE-${String(Date.now()).slice(-6).padStart(3, '0')}`;
     const date = new Date().toISOString().split('T')[0];
     
-    const [newEntry] = await db.insert(schema.journalEntries)
-      .values({ 
-        id, 
-        date, 
-        description: entry.description,
-        source: entry.source,
-        status: entry.status
-      })
-      .returning();
+    const newEntry = await db.transaction(async (tx) => {
+      const [insertedEntry] = await tx.insert(schema.journalEntries)
+        .values({ 
+          id, 
+          date, 
+          description: entry.description,
+          source: entry.source,
+          status: entry.status
+        })
+        .returning();
 
-    // Insert journal lines
-    const lines = await Promise.all(
-      entry.lines.map(line => 
-        db.insert(schema.journalLines)
-          .values({ 
-            journalEntryId: id, 
-            accountId: line.accountId,
-            type: line.type,
-            amount: line.amount.toString()
-          })
-          .returning()
-      )
-    );
+      const lines = await Promise.all(
+        entry.lines.map(line => 
+          tx.insert(schema.journalLines)
+            .values({ 
+              journalEntryId: id, 
+              accountId: line.accountId,
+              type: line.type,
+              amount: line.amount.toString()
+            })
+            .returning()
+        )
+      );
+      
+      return convertDbJournalEntry(insertedEntry, lines.flat());
+    });
 
-    res.json(convertDbJournalEntry(newEntry, lines.flat()));
+    res.json(newEntry);
   } catch (error) {
     console.error('Error adding journal entry:', error);
     res.status(500).json({ error: 'Failed to add journal entry' });
@@ -485,7 +489,8 @@ app.post('/api/purchase-orders', async (req, res) => {
     const id = `PO-${Date.now()}`;
     const date = new Date().toISOString().split('T')[0];
     
-    const [newOrder] = await db.insert(schema.purchaseOrders)
+    const newOrder = await db.transaction(async (tx) => {
+      const [insertedOrder] = await tx.insert(schema.purchaseOrders)
       .values({ 
         id, 
         date, 
@@ -495,20 +500,22 @@ app.post('/api/purchase-orders', async (req, res) => {
       })
       .returning();
 
-    // Insert purchase order items
-    const items = await Promise.all(
-      order.items.map(item => 
-        db.insert(schema.purchaseOrderItems)
-          .values({ 
-            purchaseOrderId: id, 
-            description: item.description,
-            amount: item.amount.toString()
-          })
-          .returning()
-      )
-    );
+      const items = await Promise.all(
+        order.items.map(item => 
+          tx.insert(schema.purchaseOrderItems)
+            .values({ 
+              purchaseOrderId: id, 
+              description: item.description,
+              amount: item.amount.toString()
+            })
+            .returning()
+        )
+      );
 
-    res.json(convertDbPurchaseOrder(newOrder, items.flat()));
+      return convertDbPurchaseOrder(insertedOrder, items.flat());
+    });
+
+    res.json(newOrder);
   } catch (error) {
     console.error('Error adding purchase order:', error);
     res.status(500).json({ error: 'Failed to add purchase order' });

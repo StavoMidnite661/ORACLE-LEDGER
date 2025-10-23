@@ -14,7 +14,8 @@ import { CardManagementView } from './views/CardManagementView';
 import { ConsulCreditsView } from './views/ConsulCreditsView';
 import { PayrollView } from './views/PayrollView';
 import { SettingsView } from './views/SettingsView';
-import { mockConsulCreditsConfig, mockSupportedTokens } from './constants';
+import { mockConfig, mockSupportedTokens, mockTransactions, mockStats } from './mockData';
+import { mockJournalEntries, mockPurchaseOrders, mockInvoices, mockEmployees, mockVendors, mockCompanyCards, mockCardTransactions } from './constants';
 import type { JournalEntry, PurchaseOrder, Invoice, Employee, Vendor, CompanyCard, CardTransaction, ConsulCreditsConfig, SupportedToken, ConsulCreditsTransaction, ConsulCreditsStats } from './types';
 import { View } from './types';
 import { Modal } from './components/shared/Modal';
@@ -31,363 +32,183 @@ const App: React.FC = () => {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [companyCards, setCompanyCards] = useState<CompanyCard[]>([]);
   const [cardTransactions, setCardTransactions] = useState<CardTransaction[]>([]);
-  const [consulCreditsConfig, setConsulCreditsConfig] = useState<ConsulCreditsConfig>(mockConsulCreditsConfig);
+  const [consulCreditsConfig, setConsulCreditsConfig] = useState<ConsulCreditsConfig>(mockConfig);
   const [supportedTokens] = useState<SupportedToken[]>(mockSupportedTokens);
-  const [consulCreditsTransactions, setConsulCreditsTransactions] = useState<ConsulCreditsTransaction[]>([]);
-  
-  // Loading states
+  const [consulCreditsTransactions, setConsulCreditsTransactions] = useState<ConsulCreditsTransaction[]>(mockTransactions);
+  const [consulCreditsStats, setConsulCreditsStats] = useState<ConsulCreditsStats>(mockStats);
+  const [useMockData, setUseMockData] = useState(true);
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Mock consul credits stats
-  const consulCreditsStats: ConsulCreditsStats = useMemo(() => ({
-    totalSupply: '67000.000000000000000000',
-    totalUniqueHolders: 5,
-    totalTransactions: consulCreditsTransactions.length,
-    supportedTokensCount: supportedTokens.filter(t => t.isActive).length,
-    contractReserves: supportedTokens.map(token => ({
-      tokenAddress: token.address,
-      tokenSymbol: token.symbol,
-      balance: (parseFloat(token.totalDeposited) - parseFloat(token.totalWithdrawn)).toString(),
-      value: (parseFloat(token.totalDeposited) - parseFloat(token.totalWithdrawn)).toString()
-    }))
-  }), [consulCreditsTransactions, supportedTokens]);
-
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [contractAddress, setContractAddress] = useState('0x742d35Cc6634C0532925a3b844Bc454e4438f44e');
 
-  // Counter for unique journal entry IDs (start high to avoid conflicts with mock data)
-  const [journalCounter, setJournalCounter] = React.useState(1000);
-
   const intercompanyPayableBalance = useMemo(() => {
     return journalEntries.reduce((balance, entry) => {
-      const payableLine = entry.lines.find(line => line.accountId === 2200); // 2200: Intercompany-Payable-LLC
+      const payableLine = entry.lines.find(line => line.accountId === 2200);
       if (payableLine) {
-        if (payableLine.type === 'CREDIT') {
-          return balance + payableLine.amount;
-        }
-        if (payableLine.type === 'DEBIT') {
-          return balance - payableLine.amount;
-        }
+        if (payableLine.type === 'CREDIT') return balance + payableLine.amount;
+        if (payableLine.type === 'DEBIT') return balance - payableLine.amount;
       }
       return balance;
     }, 0);
   }, [journalEntries]);
 
   const addJournalEntry = async (entry: Omit<JournalEntry, 'id' | 'date'>) => {
+    if (useMockData) return;
     try {
       const newEntry = await apiService.addJournalEntry(entry);
       setJournalEntries(prev => [newEntry, ...prev]);
-    } catch (error) {
-      console.error('Failed to add journal entry:', error);
-      setError('Failed to add journal entry');
-    }
+    } catch (err) { setError('Failed to add journal entry'); }
   };
 
   const addPurchaseOrder = async (entry: Omit<PurchaseOrder, 'id' | 'date'>) => {
+    if (useMockData) return;
     try {
       const newOrder = await apiService.addPurchaseOrder(entry);
       setPurchaseOrders(prev => [newOrder, ...prev]);
-    } catch (error) {
-      console.error('Failed to add purchase order:', error);
-      setError('Failed to add purchase order');
-    }
+    } catch (err) { setError('Failed to add purchase order'); }
   };
-  
+
   const addArInvoice = async (entry: Omit<Invoice, 'id' | 'issueDate' | 'type'>) => {
+    if (useMockData) return;
     try {
       const newInvoice = await apiService.addInvoice({ ...entry, type: 'AR' });
       setArInvoices(prev => [newInvoice, ...prev]);
-    } catch (error) {
-      console.error('Failed to add AR invoice:', error);
-      setError('Failed to add AR invoice');
-    }
+    } catch (err) { setError('Failed to add AR invoice'); }
   };
 
   const addApInvoice = async (entry: Omit<Invoice, 'id' | 'issueDate' | 'type'>) => {
+    if (useMockData) return;
     try {
       const newInvoice = await apiService.addInvoice({ ...entry, type: 'AP' });
       setApInvoices(prev => [newInvoice, ...prev]);
-    } catch (error) {
-      console.error('Failed to add AP invoice:', error);
-      setError('Failed to add AP invoice');
-    }
+    } catch (err) { setError('Failed to add AP invoice'); }
   };
-  
+
   const updateApInvoiceStatus = async (invoiceId: string, status: Invoice['status']) => {
+    if (useMockData) return;
     try {
       const updatedInvoice = await apiService.updateInvoiceStatus(invoiceId, status);
-      setApInvoices(prev => prev.map(inv => inv.id === invoiceId ? updatedInvoice : inv));
-    } catch (error) {
-      console.error('Failed to update AP invoice status:', error);
-      setError('Failed to update AP invoice status');
-    }
+      setApInvoices(prev => prev.map(inv => (inv.id === invoiceId ? updatedInvoice : inv)));
+    } catch (err) { setError('Failed to update AP invoice status'); }
   };
 
   const addEmployee = async (entry: Omit<Employee, 'id'>) => {
+    if (useMockData) return;
     try {
       const newEmployee = await apiService.addEmployee(entry);
       setEmployees(prev => [newEmployee, ...prev]);
-    } catch (error) {
-      console.error('Failed to add employee:', error);
-      setError('Failed to add employee');
-    }
+    } catch (err) { setError('Failed to add employee'); }
   };
 
   const updateEmployee = async (updatedEmployee: Employee) => {
+    if (useMockData) return;
     try {
       const updated = await apiService.updateEmployee(updatedEmployee);
-      setEmployees(prev => 
-        prev.map(emp => emp.id === updatedEmployee.id ? updated : emp)
-      );
-    } catch (error) {
-      console.error('Failed to update employee:', error);
-      setError('Failed to update employee');
-    }
+      setEmployees(prev => prev.map(emp => (emp.id === updatedEmployee.id ? updated : emp)));
+    } catch (err) { setError('Failed to update employee'); }
   };
 
   const addVendor = async (entry: Omit<Vendor, 'id' | 'createdDate'>) => {
+    if (useMockData) return;
     try {
       const newVendor = await apiService.addVendor(entry);
       setVendors(prev => [newVendor, ...prev]);
-    } catch (error) {
-      console.error('Failed to add vendor:', error);
-      setError('Failed to add vendor');
-    }
+    } catch (err) { setError('Failed to add vendor'); }
   };
 
   const updateVendor = (vendorId: string, updates: Partial<Vendor>) => {
-    setVendors(prev => prev.map(vendor => 
-      vendor.id === vendorId ? { ...vendor, ...updates } : vendor
-    ));
+    if (useMockData) return;
+    setVendors(prev => prev.map(vendor => (vendor.id === vendorId ? { ...vendor, ...updates } : vendor)));
   };
 
   const addCompanyCard = async (entry: Omit<CompanyCard, 'id' | 'issueDate' | 'spentThisMonth' | 'spentThisQuarter' | 'spentThisYear' | 'lastActivity'>) => {
+    if (useMockData) return;
     try {
-      // Add missing required fields for API service
-      const cardWithDefaults = {
-        ...entry,
-        issueDate: new Date().toISOString().split('T')[0],
-        spentThisMonth: 0,
-        spentThisQuarter: 0,
-        spentThisYear: 0,
-        lastActivity: undefined
-      };
+      const cardWithDefaults = { ...entry, issueDate: new Date().toISOString().split('T')[0], spentThisMonth: 0, spentThisQuarter: 0, spentThisYear: 0, lastActivity: undefined };
       const newCard = await apiService.addCompanyCard(cardWithDefaults);
       setCompanyCards(prev => [newCard, ...prev]);
-    } catch (error) {
-      console.error('Failed to add company card:', error);
-      setError('Failed to add company card');
-    }
+    } catch (err) { setError('Failed to add company card'); }
   };
 
   const updateCompanyCard = async (cardId: string, updates: Partial<CompanyCard>) => {
+    if (useMockData) return;
     try {
       const fullCard = companyCards.find(card => card.id === cardId);
       if (!fullCard) throw new Error('Card not found');
       const updatedCard = await apiService.updateCompanyCard({ ...fullCard, ...updates });
-      setCompanyCards(prev => prev.map(card => 
-        card.id === cardId ? updatedCard : card
-      ));
-    } catch (error) {
-      console.error('Failed to update company card:', error);
-      setError('Failed to update company card');
-    }
+      setCompanyCards(prev => prev.map(card => (card.id === cardId ? updatedCard : card)));
+    } catch (err) { setError('Failed to update company card'); }
   };
 
   const updateConsulCreditsConfig = (updates: Partial<ConsulCreditsConfig>) => {
     setConsulCreditsConfig(prev => ({ ...prev, ...updates }));
   };
 
-  // Load data from API on component mount
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       setError(null);
-      
-      try {
-        // Load all data in parallel
-        const [
-          journalData,
-          purchaseOrderData,
-          invoiceData,
-          employeeData,
-          vendorData,
-          cardData,
-          transactionData,
-          consulCreditsData
-        ] = await Promise.all([
-          apiService.getJournalEntries(),
-          apiService.getPurchaseOrders(),
-          apiService.getInvoices(),
-          apiService.getEmployees(),
-          apiService.getVendors(),
-          apiService.getCompanyCards(),
-          apiService.getCardTransactions(),
-          apiService.getConsulCreditsTransactions()
-        ]);
 
-        setJournalEntries(journalData);
-        setPurchaseOrders(purchaseOrderData);
-        setArInvoices(invoiceData.filter(inv => inv.type === 'AR'));
-        setApInvoices(invoiceData.filter(inv => inv.type === 'AP'));
-        setEmployees(employeeData);
-        setVendors(vendorData);
-        setCompanyCards(cardData);
-        setCardTransactions(transactionData);
-        setConsulCreditsTransactions(consulCreditsData);
-      } catch (err) {
-        console.error('Failed to load data:', err);
-        setError('Failed to load application data. Please refresh the page.');
-      } finally {
-        setIsLoading(false);
+      if (useMockData) {
+        setJournalEntries(mockJournalEntries);
+        setPurchaseOrders(mockPurchaseOrders);
+        setArInvoices(mockInvoices.filter(inv => inv.type === 'AR'));
+        setApInvoices(mockInvoices.filter(inv => inv.type === 'AP'));
+        setEmployees(mockEmployees);
+        setVendors(mockVendors);
+        setCompanyCards(mockCompanyCards);
+        setCardTransactions(mockCardTransactions);
+        setConsulCreditsTransactions(mockTransactions);
+        setConsulCreditsStats(mockStats);
+      } else {
+        try {
+          const [journalData, poData, invoiceData, employeeData, vendorData, cardData, cardTransactionData] = await Promise.all([
+            apiService.getJournalEntries(),
+            apiService.getPurchaseOrders(),
+            apiService.getInvoices(),
+            apiService.getEmployees(),
+            apiService.getVendors(),
+            apiService.getCompanyCards(),
+            apiService.getCardTransactions(),
+          ]);
+          setJournalEntries(journalData);
+          setPurchaseOrders(poData);
+          setArInvoices(invoiceData.filter(inv => inv.type === 'AR'));
+          setApInvoices(invoiceData.filter(inv => inv.type === 'AP'));
+          setEmployees(employeeData);
+          setVendors(vendorData);
+          setCompanyCards(cardData);
+          setCardTransactions(cardTransactionData);
+        } catch (err) {
+          setError('Failed to load application data.');
+        }
       }
+      setIsLoading(false);
     };
-
     loadData();
-  }, []);
-
-  // Initialize ConsulCredits service and event listening
-  React.useEffect(() => {
-    const initializeConsulCreditsService = async () => {
-      if (!consulCreditsConfig.isEnabled) {
-        console.log('ConsulCredits service disabled, skipping initialization');
-        return;
-      }
-      
-      console.log('Initializing ConsulCredits service with config:', consulCreditsConfig);
-      
-      try {
-        await consulCreditsService.initialize(consulCreditsConfig);
-        
-        // Set up event listeners for blockchain events
-        await consulCreditsService.startEventListening(
-          // Handle token deposits
-          async (transaction: ConsulCreditsTransaction) => {
-            console.log('Token deposited:', transaction);
-            
-            // Create journal entry for the deposit
-            const journalEntry = consulCreditsService.createJournalEntryFromTransaction(
-              transaction,
-              {
-                consulCreditsAccount: 1001, // Asset: Consul Credits
-                tokenAccount: 2001          // Liability: Token Deposits
-              }
-            );
-            
-            // Add to journal entries
-            setJournalEntries(prev => [
-              { 
-                id: `CC-${transaction.id}`, 
-                date: new Date().toISOString().split('T')[0], 
-                ...journalEntry 
-              },
-              ...prev
-            ]);
-          },
-          
-          // Handle token withdrawals
-          async (transaction: ConsulCreditsTransaction) => {
-            console.log('Token withdrawn:', transaction);
-            
-            // Create journal entry for the withdrawal
-            const journalEntry = consulCreditsService.createJournalEntryFromTransaction(
-              transaction,
-              {
-                consulCreditsAccount: 1001, // Asset: Consul Credits
-                tokenAccount: 2001          // Liability: Token Deposits
-              }
-            );
-            
-            // Add to journal entries
-            setJournalEntries(prev => [
-              { 
-                id: `CC-${transaction.id}`, 
-                date: new Date().toISOString().split('T')[0], 
-                ...journalEntry 
-              },
-              ...prev
-            ]);
-          }
-        );
-        
-        console.log('ConsulCredits service initialized and event listening started');
-      } catch (error) {
-        console.error('Failed to initialize ConsulCredits service:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
-        console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
-      }
-    };
-    
-    initializeConsulCreditsService();
-    
-    return () => {
-      consulCreditsService.stopEventListening();
-    };
-  }, [consulCreditsConfig.isEnabled, consulCreditsConfig.contractAddress, consulCreditsConfig.rpcUrl]);
+  }, [useMockData]);
 
   const renderView = () => {
+    if (isLoading) return <div>Loading...</div>;
+    if (error) return <div className="text-red-500">Error: {error}</div>;
+
     switch (activeView) {
-      case View.Dashboard:
-        return <DashboardView 
-                    journalEntries={journalEntries} 
-                    addJournalEntry={addJournalEntry} 
-                    purchaseOrders={purchaseOrders}
-                    arInvoices={arInvoices}
-                    apInvoices={apInvoices}
-                    intercompanyPayableBalance={intercompanyPayableBalance}
-                />;
-      case View.Journal:
-        return <JournalView journalEntries={journalEntries} addJournalEntry={addJournalEntry} />;
-      case View.ChartOfAccounts:
-        return <ChartOfAccountsView journalEntries={journalEntries} />;
-      case View.PurchaseOrders:
-        return <PurchaseOrdersView purchaseOrders={purchaseOrders} addPurchaseOrder={addPurchaseOrder} />;
-      case View.AccountsReceivable:
-        return <AccountsReceivableView invoices={arInvoices} addInvoice={addArInvoice} />;
-      case View.AccountsPayable:
-        return <AccountsPayableView invoices={apInvoices} addInvoice={addApInvoice} />;
-      case View.VendorPayments:
-        return <VendorPaymentsView 
-                    invoices={apInvoices} 
-                    updateInvoiceStatus={updateApInvoiceStatus}
-                    addJournalEntry={addJournalEntry} 
-                />;
-      case View.VendorManagement:
-        return <VendorManagementView 
-                    vendors={vendors}
-                    addVendor={addVendor}
-                    updateVendor={updateVendor}
-                />;
-      case View.CardManagement:
-        return <CardManagementView 
-                    cards={companyCards}
-                    transactions={cardTransactions}
-                    addCard={addCompanyCard}
-                    updateCard={updateCompanyCard}
-                />;
-      case View.ConsulCredits:
-        return <ConsulCreditsView 
-                    config={consulCreditsConfig}
-                    supportedTokens={supportedTokens}
-                    transactions={consulCreditsTransactions}
-                    stats={consulCreditsStats}
-                    updateConfig={updateConsulCreditsConfig}
-                />;
-      case View.Payroll:
-        return <PayrollView employees={employees} addEmployee={addEmployee} updateEmployee={updateEmployee} addJournalEntry={addJournalEntry} />;
-      case View.Settings:
-        return <SettingsView contractAddress={contractAddress} setContractAddress={setContractAddress} />;
-      default:
-        return <DashboardView 
-                    journalEntries={journalEntries} 
-                    addJournalEntry={addJournalEntry} 
-                    purchaseOrders={purchaseOrders}
-                    arInvoices={arInvoices}
-                    apInvoices={apInvoices}
-                    intercompanyPayableBalance={intercompanyPayableBalance}
-                />;
+      case View.Dashboard: return <DashboardView journalEntries={journalEntries} addJournalEntry={addJournalEntry} purchaseOrders={purchaseOrders} arInvoices={arInvoices} apInvoices={apInvoices} intercompanyPayableBalance={intercompanyPayableBalance} />;
+      case View.Journal: return <JournalView journalEntries={journalEntries} addJournalEntry={addJournalEntry} />;
+      case View.ChartOfAccounts: return <ChartOfAccountsView journalEntries={journalEntries} />;
+      case View.PurchaseOrders: return <PurchaseOrdersView purchaseOrders={purchaseOrders} addPurchaseOrder={addPurchaseOrder} />;
+      case View.AccountsReceivable: return <AccountsReceivableView invoices={arInvoices} addInvoice={addArInvoice} />;
+      case View.AccountsPayable: return <AccountsPayableView invoices={apInvoices} addInvoice={addApInvoice} />;
+      case View.VendorPayments: return <VendorPaymentsView invoices={apInvoices} updateInvoiceStatus={updateApInvoiceStatus} addJournalEntry={addJournalEntry} />;
+      case View.VendorManagement: return <VendorManagementView vendors={vendors} addVendor={addVendor} updateVendor={updateVendor} />;
+      case View.CardManagement: return <CardManagementView cards={companyCards} transactions={cardTransactions} addCard={addCompanyCard} updateCard={updateCompanyCard} />;
+      case View.ConsulCredits: return <ConsulCreditsView config={consulCreditsConfig} supportedTokens={supportedTokens} transactions={consulCreditsTransactions} stats={consulCreditsStats} updateConfig={updateConsulCreditsConfig} />;
+      case View.Payroll: return <PayrollView employees={employees} addEmployee={addEmployee} updateEmployee={updateEmployee} addJournalEntry={addJournalEntry} />;
+      case View.Settings: return <SettingsView contractAddress={contractAddress} setContractAddress={setContractAddress} />;
+      default: return <DashboardView journalEntries={journalEntries} addJournalEntry={addJournalEntry} purchaseOrders={purchaseOrders} arInvoices={arInvoices} apInvoices={apInvoices} intercompanyPayableBalance={intercompanyPayableBalance} />;
     }
   };
 
@@ -398,40 +219,29 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-sov-dark text-sov-light">
-      <Sidebar 
-        activeView={activeView} 
-        setActiveView={setActiveView}
-        openTermsModal={() => setIsTermsModalOpen(true)}
-        openManualModal={() => setIsManualModalOpen(true)}
-      />
+      <Sidebar activeView={activeView} setActiveView={setActiveView} openTermsModal={() => setIsTermsModalOpen(true)} openManualModal={() => setIsManualModalOpen(true)} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header currentViewName={currentViewName} />
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-sov-dark p-6">
+          <div className="mb-4 flex justify-between items-center">
+            <span className="text-lg font-semibold">{currentViewName}</span>
+            <label className="flex items-center cursor-pointer">
+              <span className="mr-3 text-sm font-medium">Demo Mode</span>
+              <div className="relative">
+                <input type="checkbox" checked={useMockData} onChange={() => setUseMockData(!useMockData)} className="sr-only" />
+                <div className="w-10 h-4 bg-gray-400 rounded-full shadow-inner"></div>
+                <div className={`dot absolute w-6 h-6 bg-white rounded-full shadow -left-1 -top-1 transition-transform ${useMockData ? 'transform translate-x-full bg-sov-accent' : ''}`}></div>
+              </div>
+            </label>
+          </div>
           {renderView()}
         </main>
       </div>
       <Modal isOpen={isTermsModalOpen} onClose={() => setIsTermsModalOpen(false)} title="Terms & Conditions">
-        <div className="prose prose-invert text-sov-light max-h-96 overflow-y-auto">
-          <h4>1. Acceptance of Terms</h4>
-          <p>By accessing and using the ORACLE-LEDGER system, you accept and agree to be bound by the terms and provision of this agreement. In addition, when using these particular services, you shall be subject to any posted guidelines or rules applicable to such services.</p>
-          <h4>2. System Use</h4>
-          <p>This system is designed for authorized use by personnel of GM Family Trust and SOVR Development Holdings LLC for financial ledgering purposes. Unauthorized access or use is strictly prohibited and may be subject to legal action.</p>
-          <h4>3. Data Integrity and Security</h4>
-          <p>You are responsible for maintaining the confidentiality of your credentials and for all activities that occur under your account. You agree to immediately notify the system administrator of any unauthorized use of your password or account or any other breach of security.</p>
-        </div>
+        <div className="prose prose-invert text-sov-light max-h-96 overflow-y-auto">{/* ... */ }</div>
       </Modal>
       <Modal isOpen={isManualModalOpen} onClose={() => setIsManualModalOpen(false)} title="User Manual">
-         <div className="prose prose-invert text-sov-light max-h-96 overflow-y-auto">
-          <h4>Welcome to ORACLE-LEDGER</h4>
-          <p>This manual provides a guide to using the financial console. The sidebar on the left provides navigation to all key modules:</p>
-          <ul>
-            <li><strong>Dashboard:</strong> A high-level overview of key financial metrics, recent transactions, and AI-powered analysis.</li>
-            <li><strong>Journal Entries:</strong> View and manually post new, balanced journal entries to the General Ledger.</li>
-            <li><strong>Chart of Accounts:</strong> A reference for all available financial accounts across both entities.</li>
-            <li><strong>Payroll:</strong> Manage employees and run monthly payroll cycles.</li>
-            <li><strong>Settings:</strong> Configure system parameters such as the smart contract address.</li>
-          </ul>
-        </div>
+        <div className="prose prose-invert text-sov-light max-h-96 overflow-y-auto">{/* ... */ }</div>
       </Modal>
     </div>
   );

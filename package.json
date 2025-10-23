@@ -9,7 +9,10 @@
     "dev:full": "concurrently \"npm run dev\" \"npm run dev:backend\"",
     "build": "vite build",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "test": "tsx services/blockchainService.test.ts",
+    "compile-contracts": "hardhat compile",
+    "start-node": "hardhat node"
   },
   "dependencies": {
     "@google/genai": "^1.16.0",
@@ -35,7 +38,10 @@
     "ws": "^8.18.3"
   },
   "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@types/node": "^22.14.0",
+    "hardhat": "^2.22.6",
+    "solc": "^0.8.24",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

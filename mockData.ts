@@ -4,7 +4,7 @@ import type {
   SupportedToken, 
   ConsulCreditsTransaction, 
   ConsulCreditsStats 
-} from '../types';
+} from './types';
 
 export const mockConfig: ConsulCreditsConfig = {
   isEnabled: true,
