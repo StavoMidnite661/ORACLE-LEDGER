@@ -255,6 +255,8 @@ export interface SmartContractMapping {
 }
 
 // Consul Credits Wrapper Contract Types
+export type ConsulCreditsTab = 'overview' | 'tokens' | 'transactions' | 'settings';
+
 export interface ConsulCreditsConfig {
   contractAddress: string;
   networkName: string;

@@ -71,7 +71,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ journalEntries, pu
     });
     
     // Convert to array and sort by date
-    return Object.keys(aggregatedData)
+    return Object.keys( aggregatedData)
         .map(date => ({
             name: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
             cash: aggregatedData[date].cash,
@@ -128,8 +128,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ journalEntries, pu
       alert("No data available to download.");
       return;
     }
-    
-    let processedData = data;
+
+    let processedData = [...data]; // Create a mutable copy
+
     if (filename.includes('journal-entries')) {
         processedData = data.map((entry: JournalEntry) => {
             const debit = entry.lines.find(l => l.type === 'DEBIT');
@@ -153,14 +154,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ journalEntries, pu
         }));
     }
 
+    if (processedData.length === 0) {
+        alert("No data to process for the report.");
+        return;
+    }
+
     const headers = Object.keys(processedData[0]);
     const csvContent = [
         headers.join(','),
-        ...processedData.map(row => headers.map(header => {
-            let cell = row[header as keyof typeof row];
-            const strCell = String(cell).replace(/"/g, '""');
-            return `"${strCell}"`;
-        }).join(','))
+        ...processedData.map(row => 
+            headers.map(header => {
+                let cell = (row as any)[header];
+                if (cell === null || cell === undefined) {
+                    cell = '';
+                }
+                const strCell = String(cell).replace(/"/g, '""');
+                return `"${strCell}"`;
+            }).join(',')
+        )
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

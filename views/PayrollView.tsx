@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import type { Employee, JournalEntry } from '../types';
+import type { Employee, JournalEntry, JournalEntryLine } from '../types';
 import { Modal } from '../components/shared/Modal';
 import { PayrollStub } from '../components/payroll/PayrollStub';
 
@@ -31,7 +31,6 @@ export const PayrollView: React.FC<PayrollViewProps> = ({ employees, addEmployee
   const [paymentMethod, setPaymentMethod] = useState<'ACH' | 'Wire' | 'Crypto'>('ACH');
   const [taxId, setTaxId] = useState('');
   
-  // Edit employee state
   const [selectedEmployeeForEdit, setSelectedEmployeeForEdit] = useState<Employee | null>(null);
   const [isEditEmployeeModalOpen, setIsEditEmployeeModalOpen] = useState(false);
   const [editName, setEditName] = useState('');
@@ -98,7 +97,6 @@ export const PayrollView: React.FC<PayrollViewProps> = ({ employees, addEmployee
     });
     
     setIsAddEmployeeModalOpen(false);
-    // Clear form
     setName('');
     setAnnualSalary('');
     setBankRoutingNumber('');
@@ -137,7 +135,6 @@ export const PayrollView: React.FC<PayrollViewProps> = ({ employees, addEmployee
     setIsEditEmployeeModalOpen(false);
     setSelectedEmployeeForEdit(null);
     
-    // Clear edit form
     setEditName('');
     setEditAnnualSalary('');
     setEditBankRoutingNumber('');
@@ -153,7 +150,6 @@ export const PayrollView: React.FC<PayrollViewProps> = ({ employees, addEmployee
     const totalDeductions = totalGrossPay * 0.20; // Simplified 20% deduction
     const totalNetPay = totalGrossPay - totalDeductions;
 
-    // 1. Record Gross Payroll Expense
     addJournalEntry({
       description: 'Record monthly gross payroll expense',
       source: 'PAYROLL',
@@ -164,60 +160,39 @@ export const PayrollView: React.FC<PayrollViewProps> = ({ employees, addEmployee
       ],
     });
 
-    // 2. Process individual employee payments by method
-    const achEmployees = employees.filter(emp => emp.paymentMethod === 'ACH' || !emp.paymentMethod);
-    const wireEmployees = employees.filter(emp => emp.paymentMethod === 'Wire');
-    const cryptoEmployees = employees.filter(emp => emp.paymentMethod === 'Crypto');
+    const paymentData = employees.reduce((acc, emp) => {
+        const netPay = (emp.annualSalary / 12) * 0.8;
+        const method = emp.paymentMethod || 'ACH';
+        const accountId = method === 'ACH' ? 2100 : method === 'Wire' ? 1000 : 1001;
+        
+        const existing = acc.find(p => p.accountId === accountId);
+        if (existing) {
+            existing.amount += netPay;
+        } else {
+            acc.push({ accountId, amount: netPay, method });
+        }
+        return acc;
+    }, [] as { accountId: number; amount: number; method: string }[]);
 
-    // ACH payments (default)
-    if (achEmployees.length > 0) {
-      const achNetPay = achEmployees.reduce((sum, emp) => sum + (emp.annualSalary / 12 * 0.8), 0);
-      addJournalEntry({
-        description: `Transfer ACH payroll for ${achEmployees.length} employees`,
+    const paymentLines: JournalEntryLine[] = paymentData.map(p => ({
+        accountId: p.accountId,
+        type: 'CREDIT',
+        amount: p.amount,
+    }));
+
+    addJournalEntry({
+        description: `Process payroll payments for ${employees.length} employees`,
         source: 'PAYROLL',
         status: 'Posted',
         lines: [
-          { accountId: 2400, type: 'DEBIT', amount: achNetPay },
-          { accountId: 2100, type: 'CREDIT', amount: achNetPay }, // ACH-Clearing-LLC
+            { accountId: 2400, type: 'DEBIT', amount: totalNetPay },
+            ...paymentLines,
         ],
-      });
-    }
-
-    // Wire payments
-    if (wireEmployees.length > 0) {
-      const wireNetPay = wireEmployees.reduce((sum, emp) => sum + (emp.annualSalary / 12 * 0.8), 0);
-      addJournalEntry({
-        description: `Wire transfer payroll for ${wireEmployees.length} employees`,
-        source: 'PAYROLL',
-        status: 'Posted',
-        lines: [
-          { accountId: 2400, type: 'DEBIT', amount: wireNetPay },
-          { accountId: 1000, type: 'CREDIT', amount: wireNetPay }, // Operating-Cash-LLC
-        ],
-      });
-    }
-
-    // Crypto payments
-    if (cryptoEmployees.length > 0) {
-      const cryptoNetPay = cryptoEmployees.reduce((sum, emp) => sum + (emp.annualSalary / 12 * 0.8), 0);
-      addJournalEntry({
-        description: `Crypto payroll for ${cryptoEmployees.length} employees`,
-        source: 'PAYROLL',
-        status: 'Posted',
-        lines: [
-          { accountId: 2400, type: 'DEBIT', amount: cryptoNetPay },
-          { accountId: 1001, type: 'CREDIT', amount: cryptoNetPay }, // Consul Credits or crypto assets
-        ],
-      });
-    }
+    });
     
-    const paymentSummary = [
-      achEmployees.length > 0 && `${achEmployees.length} ACH`,
-      wireEmployees.length > 0 && `${wireEmployees.length} Wire`,
-      cryptoEmployees.length > 0 && `${cryptoEmployees.length} Crypto`
-    ].filter(Boolean).join(', ');
-    
-    setLastPayrollRun(`Successfully ran payroll for ${employees.length} employees (${paymentSummary}). Gross: $${totalGrossPay.toFixed(2)}, Net: $${totalNetPay.toFixed(2)}.`);
+    const paymentSummary = paymentData.map(p => `${p.method}: $${p.amount.toFixed(2)}`).join(', ');
+
+    setLastPayrollRun(`Successfully ran payroll for ${employees.length} employees. Gross: $${totalGrossPay.toFixed(2)}, Net: $${totalNetPay.toFixed(2)}. Payments: ${paymentSummary}`);
     setIsConfirmPayrollModalOpen(false);
   };
   

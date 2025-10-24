@@ -6,7 +6,8 @@ import type {
   CardTransaction, 
   PurchaseOrder, 
   Invoice, 
-  ConsulCreditsTransaction 
+  ConsulCreditsTransaction,
+  ConsulCreditsConfig
 } from '../types';
 
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
@@ -135,6 +136,11 @@ class ApiService {
       method: 'PUT',
       body: JSON.stringify({ status }),
     });
+  }
+  
+  // Consul Credits
+  async getConsulCreditsConfig(): Promise<ConsulCreditsConfig> {
+    return this.fetchApi<ConsulCreditsConfig>('/consul-credits/config');
   }
 
   // ConsulCredits Transactions

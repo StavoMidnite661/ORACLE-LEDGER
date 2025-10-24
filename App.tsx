@@ -32,10 +32,10 @@ const App: React.FC = () => {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [companyCards, setCompanyCards] = useState<CompanyCard[]>([]);
   const [cardTransactions, setCardTransactions] = useState<CardTransaction[]>([]);
-  const [consulCreditsConfig, setConsulCreditsConfig] = useState<ConsulCreditsConfig>(mockConfig);
-  const [supportedTokens] = useState<SupportedToken[]>(mockSupportedTokens);
+  const [consulCreditsConfig, setConsulCreditsConfig] = useState<ConsulCreditsConfig | null>(mockConfig);
+  const [supportedTokens, setSupportedTokens] = useState<SupportedToken[]>(mockSupportedTokens);
   const [consulCreditsTransactions, setConsulCreditsTransactions] = useState<ConsulCreditsTransaction[]>(mockTransactions);
-  const [consulCreditsStats, setConsulCreditsStats] = useState<ConsulCreditsStats>(mockStats);
+  const [consulCreditsStats, setConsulCreditsStats] = useState<ConsulCreditsStats | null>(mockStats);
   const [useMockData, setUseMockData] = useState(true);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -144,7 +144,7 @@ const App: React.FC = () => {
   };
 
   const updateConsulCreditsConfig = (updates: Partial<ConsulCreditsConfig>) => {
-    setConsulCreditsConfig(prev => ({ ...prev, ...updates }));
+    setConsulCreditsConfig(prev => prev ? ({ ...prev, ...updates }) : null);
   };
 
   useEffect(() => {
@@ -161,11 +161,13 @@ const App: React.FC = () => {
         setVendors(mockVendors);
         setCompanyCards(mockCompanyCards);
         setCardTransactions(mockCardTransactions);
+        setConsulCreditsConfig(mockConfig);
+        setSupportedTokens(mockSupportedTokens);
         setConsulCreditsTransactions(mockTransactions);
         setConsulCreditsStats(mockStats);
       } else {
         try {
-          const [journalData, poData, invoiceData, employeeData, vendorData, cardData, cardTransactionData] = await Promise.all([
+          const [journalData, poData, invoiceData, employeeData, vendorData, cardData, cardTransactionData, consulCreditsConfigData, consulCreditsTransactionsData] = await Promise.all([
             apiService.getJournalEntries(),
             apiService.getPurchaseOrders(),
             apiService.getInvoices(),
@@ -173,6 +175,8 @@ const App: React.FC = () => {
             apiService.getVendors(),
             apiService.getCompanyCards(),
             apiService.getCardTransactions(),
+            apiService.getConsulCreditsConfig(),
+            apiService.getConsulCreditsTransactions(),
           ]);
           setJournalEntries(journalData);
           setPurchaseOrders(poData);
@@ -182,6 +186,15 @@ const App: React.FC = () => {
           setVendors(vendorData);
           setCompanyCards(cardData);
           setCardTransactions(cardTransactionData);
+          setConsulCreditsConfig(consulCreditsConfigData);
+          setConsulCreditsTransactions(consulCreditsTransactionsData);
+          
+          if (consulCreditsConfigData) {
+            await consulCreditsService.initialize(consulCreditsConfigData);
+            const stats = await consulCreditsService.getContractStats();
+            setConsulCreditsStats(stats);
+            // TODO: Get supported tokens from service if needed
+          }
         } catch (err) {
           setError('Failed to load application data.');
         }
@@ -205,7 +218,7 @@ const App: React.FC = () => {
       case View.VendorPayments: return <VendorPaymentsView invoices={apInvoices} updateInvoiceStatus={updateApInvoiceStatus} addJournalEntry={addJournalEntry} />;
       case View.VendorManagement: return <VendorManagementView vendors={vendors} addVendor={addVendor} updateVendor={updateVendor} />;
       case View.CardManagement: return <CardManagementView cards={companyCards} transactions={cardTransactions} addCard={addCompanyCard} updateCard={updateCompanyCard} />;
-      case View.ConsulCredits: return <ConsulCreditsView config={consulCreditsConfig} supportedTokens={supportedTokens} transactions={consulCreditsTransactions} stats={consulCreditsStats} updateConfig={updateConsulCreditsConfig} />;
+      case View.ConsulCredits: return consulCreditsConfig && consulCreditsStats ? <ConsulCreditsView config={consulCreditsConfig} supportedTokens={supportedTokens} transactions={consulCreditsTransactions} stats={consulCreditsStats} updateConfig={updateConsulCreditsConfig} /> : <div>Loading Consul Credits data...</div>;
       case View.Payroll: return <PayrollView employees={employees} addEmployee={addEmployee} updateEmployee={updateEmployee} addJournalEntry={addJournalEntry} />;
       case View.Settings: return <SettingsView contractAddress={contractAddress} setContractAddress={setContractAddress} />;
       default: return <DashboardView journalEntries={journalEntries} addJournalEntry={addJournalEntry} purchaseOrders={purchaseOrders} arInvoices={arInvoices} apInvoices={apInvoices} intercompanyPayableBalance={intercompanyPayableBalance} />;
@@ -218,21 +231,13 @@ const App: React.FC = () => {
   }, [activeView]);
 
   return (
-    <div className="flex h-screen bg-sov-dark text-sov-light">
+    <div className="flex bg-sov-dark text-sov-light">
       <Sidebar activeView={activeView} setActiveView={setActiveView} openTermsModal={() => setIsTermsModalOpen(true)} openManualModal={() => setIsManualModalOpen(true)} />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden h-screen">
         <Header currentViewName={currentViewName} />
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-sov-dark p-6">
           <div className="mb-4 flex justify-between items-center">
             <span className="text-lg font-semibold">{currentViewName}</span>
-            <label className="flex items-center cursor-pointer">
-              <span className="mr-3 text-sm font-medium">Demo Mode</span>
-              <div className="relative">
-                <input type="checkbox" checked={useMockData} onChange={() => setUseMockData(!useMockData)} className="sr-only" />
-                <div className="w-10 h-4 bg-gray-400 rounded-full shadow-inner"></div>
-                <div className={`dot absolute w-6 h-6 bg-white rounded-full shadow -left-1 -top-1 transition-transform ${useMockData ? 'transform translate-x-full bg-sov-accent' : ''}`}></div>
-              </div>
-            </label>
           </div>
           {renderView()}
         </main>

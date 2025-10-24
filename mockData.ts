@@ -63,6 +63,9 @@ export const mockTransactions: ConsulCreditsTransaction[] = [
     timestamp: new Date().toISOString(),
     ledgerReference: 'JOURNAL-101',
     journalEntryId: 'JE-001',
+    tokenAddress: '',
+    exchangeRate: '',
+    confirmations: 0
   },
   {
     id: '2',
@@ -77,6 +80,9 @@ export const mockTransactions: ConsulCreditsTransaction[] = [
     timestamp: new Date().toISOString(),
     ledgerReference: 'JOURNAL-102',
     journalEntryId: 'JE-002',
+    tokenAddress: '',
+    exchangeRate: '',
+    confirmations: 0
   },
   {
     id: '3',
@@ -91,6 +97,9 @@ export const mockTransactions: ConsulCreditsTransaction[] = [
     timestamp: new Date().toISOString(),
     ledgerReference: 'JOURNAL-103',
     journalEntryId: 'JE-003',
+    tokenAddress: '',
+    exchangeRate: '',
+    confirmations: 0
   },
   {
     id: '4',
@@ -105,6 +114,9 @@ export const mockTransactions: ConsulCreditsTransaction[] = [
     timestamp: new Date().toISOString(),
     ledgerReference: 'JOURNAL-104',
     journalEntryId: 'JE-004',
+    tokenAddress: '',
+    exchangeRate: '',
+    confirmations: 0
   },
 ];
 

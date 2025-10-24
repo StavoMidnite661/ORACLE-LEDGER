@@ -1,21 +1,13 @@
+
 import React from 'react';
 import { View } from '../../types';
-
-// SVG Icons defined at top to avoid hoisting issues
-const DashboardIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>;
-const JournalIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>;
-const AccountsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>;
-const POIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
-const ARIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>;
-const APIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l-4-4 4-4m6 8l4-4-4-4" /></svg>;
-const PaymentsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m-4 0h14a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4 0V5m0 14v-2m0 0V5m0 0v3m0 0a3 3 0 100 6 3 3 0 000-6zm-7 3a2 2 0 11-4 0 2 2 0 014 0z" /></svg>;
-const PayrollIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 919.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>;
-const VendorIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>;
-const CardIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>;
-const ConsulCreditsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const SettingsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
-const ManualIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>;
-const TermsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 8a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+import { NavItem } from './NavItem';
+import { 
+    DashboardIcon, JournalIcon, ChartOfAccountsIcon, PurchaseOrdersIcon, 
+    ARIcon, APIcon, VendorPaymentsIcon, VendorManagementIcon, 
+    CardManagementIcon, ConsulCreditsIcon, PayrollIcon, SettingsIcon, 
+    UserManualIcon, TermsIcon 
+} from '../../components/shared/Icons';
 
 interface SidebarProps {
   activeView: View;
@@ -24,78 +16,45 @@ interface SidebarProps {
   openManualModal: () => void;
 }
 
-const NavItem: React.FC<{
-  icon: React.ReactElement;
-  label: string;
-  view?: View;
-  activeView?: View;
-  onClick: (view?: View) => void;
-}> = ({ icon, label, view, activeView, onClick }) => (
-  <button
-    onClick={() => onClick(view)}
-    className={`w-full flex items-center p-3 my-1 rounded-lg transition-colors duration-200 ${
-      activeView === view
-        ? 'bg-sov-accent text-sov-dark'
-        : 'text-sov-light-alt hover:bg-sov-dark-alt hover:text-sov-light'
-    }`}
-  >
-    {icon}
-    <span className="ml-4 font-semibold">{label}</span>
-  </button>
-);
+const mainViews = [
+    { id: View.Dashboard, label: 'Dashboard', icon: <DashboardIcon /> },
+    { id: View.Journal, label: 'Journal Entries', icon: <JournalIcon /> },
+    { id: View.ChartOfAccounts, label: 'Chart of Accounts', icon: <ChartOfAccountsIcon /> },
+    { id: View.PurchaseOrders, label: 'Purchase Orders', icon: <PurchaseOrdersIcon /> },
+    { id: View.AccountsReceivable, label: 'Accounts Receivable', icon: <ARIcon /> },
+    { id: View.AccountsPayable, label: 'Accounts Payable', icon: <APIcon /> },
+    { id: View.VendorPayments, label: 'Vendor Payments', icon: <VendorPaymentsIcon /> },
+    { id: View.VendorManagement, label: 'Vendor Management', icon: <VendorManagementIcon /> },
+    { id: View.CardManagement, label: 'Company Cards', icon: <CardManagementIcon /> },
+    { id: View.ConsulCredits, label: 'Consul Credits', icon: <ConsulCreditsIcon /> },
+    { id: View.Payroll, label: 'Payroll', icon: <PayrollIcon /> },
+    { id: View.Settings, label: 'Settings', icon: <SettingsIcon /> },
+];
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, openTermsModal, openManualModal }) => {
-  const navItems = [
-    { view: View.Dashboard, label: 'Dashboard', icon: <DashboardIcon /> },
-    { view: View.Journal, label: 'Journal Entries', icon: <JournalIcon /> },
-    { view: View.ChartOfAccounts, label: 'Chart of Accounts', icon: <AccountsIcon /> },
-    { view: View.PurchaseOrders, label: 'Purchase Orders', icon: <POIcon /> },
-    { view: View.AccountsReceivable, label: 'Accounts Receivable', icon: <ARIcon /> },
-    { view: View.AccountsPayable, label: 'Accounts Payable', icon: <APIcon /> },
-    { view: View.VendorPayments, label: 'Vendor Payments', icon: <PaymentsIcon /> },
-    { view: View.VendorManagement, label: 'Vendor Management', icon: <VendorIcon /> },
-    { view: View.CardManagement, label: 'Company Cards', icon: <CardIcon /> },
-    { view: View.ConsulCredits, label: 'Consul Credits', icon: <ConsulCreditsIcon /> },
-    { view: View.Payroll, label: 'Payroll', icon: <PayrollIcon /> },
-  ];
-
   return (
-    <aside className="w-64 bg-sov-dark-alt p-4 flex flex-col border-r border-gray-700">
-      <div className="flex items-center mb-8">
-        <div className="w-10 h-10 bg-sov-accent rounded-full flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-sov-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+    <div className="bg-sov-dark-alt w-64 flex flex-col p-4 border-r border-gray-700">
+        <div>
+            <div className="mb-8">
+                <h1 className="text-2xl font-bold text-sov-light tracking-wider">ORACLE-LEDGER</h1>
+                <p className="text-xs text-sov-light-alt">SOVRCVLT-OS</p>
+            </div>
+            <nav className="space-y-2">
+                {mainViews.map((view) => (
+                    <NavItem 
+                        key={view.id} 
+                        label={view.label} 
+                        icon={view.icon}
+                        isActive={activeView === view.id}
+                        onClick={() => setActiveView(view.id)}
+                    />
+                ))}
+            </nav>
         </div>
-        <h1 className="ml-3 text-xl font-bold text-sov-light">ORACLE-LEDGER</h1>
-      </div>
-      <nav className="flex-grow flex flex-col">
-        {navItems.map(item => (
-          <NavItem
-            key={item.view}
-            {...item}
-            activeView={activeView}
-            onClick={() => setActiveView(item.view)}
-          />
-        ))}
-        <div className="mt-auto pt-4 border-t border-gray-700">
-             <NavItem
-                view={View.Settings}
-                label="Settings"
-                icon={<SettingsIcon />}
-                activeView={activeView}
-                onClick={() => setActiveView(View.Settings)}
-             />
-             <NavItem
-                label="User Manual"
-                icon={<ManualIcon />}
-                onClick={openManualModal}
-             />
-             <NavItem
-                label="Terms & Conditions"
-                icon={<TermsIcon />}
-                onClick={openTermsModal}
-             />
+        <div className="space-y-2 mt-auto">
+            <NavItem label="User Manual" icon={<UserManualIcon />} onClick={openManualModal} />
+            <NavItem label="Terms & Conditions" icon={<TermsIcon />} onClick={openTermsModal} />
         </div>
-      </nav>
-    </aside>
+    </div>
   );
 };

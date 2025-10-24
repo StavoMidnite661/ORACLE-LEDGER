@@ -3,7 +3,8 @@ import type {
   ConsulCreditsConfig, 
   SupportedToken, 
   ConsulCreditsTransaction, 
-  ConsulCreditsStats 
+  ConsulCreditsStats,
+  ConsulCreditsTab
 } from '../types';
 
 interface ConsulCreditsViewProps {
@@ -21,7 +22,7 @@ export const ConsulCreditsView: React.FC<ConsulCreditsViewProps> = ({
   stats,
   updateConfig
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'tokens' | 'transactions' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<ConsulCreditsTab>('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | ConsulCreditsTransaction['status']>('all');
 
@@ -156,7 +157,7 @@ export const ConsulCreditsView: React.FC<ConsulCreditsViewProps> = ({
           ].map(tab => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key as any)}
+              onClick={() => setActiveTab(tab.key as ConsulCreditsTab)}
               className={`px-4 py-2 font-semibold rounded-lg transition-colors ${
                 activeTab === tab.key 
                   ? 'bg-sov-accent text-sov-dark' 
