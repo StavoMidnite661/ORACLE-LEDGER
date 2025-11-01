@@ -13,6 +13,7 @@ import type {
   PurchaseOrder, 
   Invoice, 
   ConsulCreditsTransaction,
+  ConsulCreditsConfig,
   Entity 
 } from '../types';
 import { SpendCategory } from '../types';
@@ -612,6 +613,71 @@ app.post('/api/consul-credits-transactions', async (req, res) => {
   } catch (error) {
     console.error('Error adding consul credits transaction:', error);
     res.status(500).json({ error: 'Failed to add consul credits transaction' });
+  }
+});
+
+// ConsulCredits Config
+app.get('/api/consul-credits/config', async (req, res) => {
+  try {
+    // Check if config exists in database, if not return default config
+    const configs = await db.select().from(schema.consulCreditsConfig).limit(1);
+    
+    if (configs.length > 0) {
+      res.json(configs[0]);
+    } else {
+      // Return default config from environment or fallback values
+      const defaultConfig = {
+        isEnabled: process.env.CONSUL_CREDITS_ENABLED === 'true',
+        networkName: process.env.CONSUL_CREDITS_NETWORK || 'Sepolia Testnet',
+        chainId: parseInt(process.env.CONSUL_CREDITS_CHAIN_ID || '11155111'),
+        contractAddress: process.env.CONSUL_CREDITS_CONTRACT || '0x1234567890123456789012345678901234567890',
+        rpcUrl: process.env.ETHEREUM_RPC_URL || 'https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID',
+        oracleIntegratorAddress: process.env.ORACLE_INTEGRATOR_ADDRESS || '0x0987654321098765432109876543210987654321',
+        confirmationsRequired: parseInt(process.env.CONSUL_CREDITS_CONFIRMATIONS || '3')
+      };
+      res.json(defaultConfig);
+    }
+  } catch (error) {
+    console.error('Error fetching consul credits config:', error);
+    // Return default config as fallback
+    const fallbackConfig = {
+      isEnabled: true,
+      networkName: 'Sepolia Testnet',
+      chainId: 11155111,
+      contractAddress: '0x1234567890123456789012345678901234567890',
+      rpcUrl: 'https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID',
+      oracleIntegratorAddress: '0x0987654321098765432109876543210987654321',
+      confirmationsRequired: 3
+    };
+    res.json(fallbackConfig);
+  }
+});
+
+app.post('/api/consul-credits/config', async (req, res) => {
+  try {
+    const config = req.body as ConsulCreditsConfig;
+    
+    // Check if config already exists
+    const existingConfigs = await db.select().from(schema.consulCreditsConfig).limit(1);
+    
+    let result;
+    if (existingConfigs.length > 0) {
+      // Update existing config
+      result = await db.update(schema.consulCreditsConfig)
+        .set(config)
+        .where(eq(schema.consulCreditsConfig.id, existingConfigs[0].id))
+        .returning();
+    } else {
+      // Insert new config
+      result = await db.insert(schema.consulCreditsConfig)
+        .values({ id: 'default', ...config })
+        .returning();
+    }
+    
+    res.json(result[0]);
+  } catch (error) {
+    console.error('Error updating consul credits config:', error);
+    res.status(500).json({ error: 'Failed to update consul credits config' });
   }
 });
 

@@ -174,6 +174,20 @@ CREATE TABLE card_reveal_audit (
   FOREIGN KEY (card_id) REFERENCES company_cards(id)
 );
 
+-- Consul Credits Configuration
+CREATE TABLE consul_credits_config (
+  id VARCHAR(50) PRIMARY KEY DEFAULT 'default',
+  contract_address VARCHAR(42) NOT NULL,
+  network_name VARCHAR(100) NOT NULL,
+  chain_id INTEGER NOT NULL,
+  rpc_url TEXT NOT NULL,
+  oracle_integrator_address VARCHAR(42) NOT NULL,
+  confirmations_required INTEGER NOT NULL DEFAULT 3,
+  is_enabled BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Indexes for Performance
 CREATE INDEX idx_journal_lines_entry ON journal_lines(journal_entry_id);
 CREATE INDEX idx_journal_lines_account ON journal_lines(account_id);

@@ -156,6 +156,19 @@ export const consulCreditsTransactions = pgTable('consul_credits_transactions', 
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+export const consulCreditsConfig = pgTable('consul_credits_config', {
+  id: varchar('id', { length: 50 }).primaryKey().default('default'),
+  contractAddress: varchar('contract_address', { length: 42 }).notNull(),
+  networkName: varchar('network_name', { length: 100 }).notNull(),
+  chainId: integer('chain_id').notNull(),
+  rpcUrl: text('rpc_url').notNull(),
+  oracleIntegratorAddress: varchar('oracle_integrator_address', { length: 42 }).notNull(),
+  confirmationsRequired: integer('confirmations_required').notNull().default(3),
+  isEnabled: boolean('is_enabled').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
 // Card Reveal Audit
 export const cardRevealAudit = pgTable('card_reveal_audit', {
   id: serial('id').primaryKey(),
@@ -246,6 +259,9 @@ export type NewInvoice = typeof invoices.$inferInsert;
 
 export type ConsulCreditsTransaction = typeof consulCreditsTransactions.$inferSelect;
 export type NewConsulCreditsTransaction = typeof consulCreditsTransactions.$inferInsert;
+
+export type ConsulCreditsConfig = typeof consulCreditsConfig.$inferSelect;
+export type NewConsulCreditsConfig = typeof consulCreditsConfig.$inferInsert;
 
 export type CardRevealAudit = typeof cardRevealAudit.$inferSelect;
 export type NewCardRevealAudit = typeof cardRevealAudit.$inferInsert;
