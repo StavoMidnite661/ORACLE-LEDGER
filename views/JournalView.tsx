@@ -1,12 +1,14 @@
 
 import React, { useState, useMemo } from 'react';
-import type { JournalEntry } from '../types';
+import type { JournalEntry, AchPayment, StripeCustomer } from '../types';
 import { CHART_OF_ACCOUNTS } from '../constants';
 import { Modal } from '../components/shared/Modal';
 
 interface JournalViewProps {
   journalEntries: JournalEntry[];
   addJournalEntry: (entry: Omit<JournalEntry, 'id' | 'date'>) => void;
+  achPayments?: AchPayment[];
+  stripeCustomers?: StripeCustomer[];
 }
 
 type SortableKeys = keyof JournalEntry | 'amount';
@@ -21,7 +23,12 @@ const SortIndicator: React.FC<{ direction?: 'ascending' | 'descending' }> = ({ d
   </span>
 );
 
-export const JournalView: React.FC<JournalViewProps> = ({ journalEntries, addJournalEntry }) => {
+export const JournalView: React.FC<JournalViewProps> = ({ 
+  journalEntries, 
+  addJournalEntry,
+  achPayments = [],
+  stripeCustomers = []
+}) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [description, setDescription] = useState('');
   const [debitAccountId, setDebitAccountId] = useState<number | ''>('');
@@ -30,11 +37,33 @@ export const JournalView: React.FC<JournalViewProps> = ({ journalEntries, addJou
   const [source, setSource] = useState<JournalEntry['source']>('PURCHASE');
   const [error, setError] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig | null>({ key: 'date', direction: 'descending' });
+  const [paymentFilter, setPaymentFilter] = useState<'all' | 'ach' | 'stripe' | 'nacha' | 'intercompany'>('all');
+  const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
 
-  const sortedJournalEntries = useMemo(() => {
-    let sortableItems = [...journalEntries];
+  const filteredAndSortedJournalEntries = useMemo(() => {
+    let filteredItems = [...journalEntries];
+
+    // Apply payment filter
+    if (paymentFilter !== 'all') {
+      filteredItems = filteredItems.filter(entry => {
+        switch (paymentFilter) {
+          case 'ach':
+            return entry.source === 'PAYMENT' || entry.source === 'AR';
+          case 'stripe':
+            return entry.source === 'PAYMENT';
+          case 'nacha':
+            return entry.source === 'NACHA';
+          case 'intercompany':
+            return entry.source === 'INTERCOMPANY';
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Apply sorting
     if (sortConfig !== null) {
-      sortableItems.sort((a, b) => {
+      filteredItems.sort((a, b) => {
         const key = sortConfig.key;
         let aValue: any;
         let bValue: any;
@@ -56,8 +85,43 @@ export const JournalView: React.FC<JournalViewProps> = ({ journalEntries, addJou
         return 0;
       });
     }
-    return sortableItems;
-  }, [journalEntries, sortConfig]);
+    return filteredItems;
+  }, [journalEntries, sortConfig, paymentFilter]);
+
+  const getStripePaymentInfo = (entry: JournalEntry) => {
+    const relatedPayment = achPayments.find(payment => 
+      payment.journalEntryId === entry.id
+    );
+    
+    if (!relatedPayment) return null;
+
+    const customer = stripeCustomers.find(c => c.id === relatedPayment.customerId);
+    
+    return {
+      payment: relatedPayment,
+      customer: customer ? `${customer.firstName} ${customer.lastName}` : 'Unknown Customer',
+      status: relatedPayment.status,
+      amount: relatedPayment.amountCents / 100,
+    };
+  };
+
+  const getReconciliationStatus = (entry: JournalEntry) => {
+    const relatedPayment = achPayments.find(payment => 
+      payment.journalEntryId === entry.id
+    );
+    
+    if (!relatedPayment) return null;
+    
+    if (relatedPayment.status === 'succeeded') {
+      return { status: 'reconciled', color: 'bg-sov-green/20 text-sov-green' };
+    } else if (relatedPayment.status === 'pending') {
+      return { status: 'pending', color: 'bg-sov-gold/20 text-sov-gold' };
+    } else if (relatedPayment.status === 'failed') {
+      return { status: 'failed', color: 'bg-sov-red/20 text-sov-red' };
+    }
+    
+    return null;
+  };
 
   const requestSort = (key: SortableKeys) => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -110,7 +174,24 @@ export const JournalView: React.FC<JournalViewProps> = ({ journalEntries, addJou
     <>
       <div className="bg-sov-dark-alt p-6 rounded-lg shadow-lg border border-gray-700">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold text-sov-light">General Journal</h3>
+          <div>
+            <h3 className="text-xl font-semibold text-sov-light">General Journal</h3>
+            <div className="mt-2">
+              <label htmlFor="paymentFilter" className="block text-sm font-medium text-sov-light-alt mb-1">Filter by Payment Type</label>
+              <select 
+                id="paymentFilter" 
+                value={paymentFilter} 
+                onChange={(e) => setPaymentFilter(e.target.value as typeof paymentFilter)}
+                className="bg-sov-dark border border-gray-600 rounded-md shadow-sm py-1 px-3 text-sov-light focus:outline-none focus:ring-sov-accent focus:border-sov-accent text-sm"
+              >
+                <option value="all">All Entries</option>
+                <option value="ach">ACH & Stripe Payments</option>
+                <option value="nacha">NACHA Transactions</option>
+                <option value="intercompany">Intercompany</option>
+                <option value="stripe">Stripe Only</option>
+              </select>
+            </div>
+          </div>
           <button 
             onClick={() => setIsModalOpen(true)}
             className="bg-sov-accent text-sov-dark font-bold py-2 px-4 rounded-lg hover:bg-sov-accent-hover transition-colors">
@@ -136,32 +217,91 @@ export const JournalView: React.FC<JournalViewProps> = ({ journalEntries, addJou
                 <th className="p-3 cursor-pointer" onClick={() => requestSort('status')}>
                     <div className="flex items-center">Status <SortIndicator direction={getSortDirection('status')} /></div>
                 </th>
+                <th className="p-3 text-center">Payment Method</th>
+                <th className="p-3 text-center">Reconciliation</th>
                 <th className="p-3 text-right cursor-pointer" onClick={() => requestSort('amount')}>
                     <div className="flex items-center justify-end">Amount <SortIndicator direction={getSortDirection('amount')} /></div>
                 </th>
+                <th className="p-3 text-center">Details</th>
               </tr>
             </thead>
             <tbody>
-              {sortedJournalEntries.map(entry => (
-                <tr key={entry.id} className="border-b border-gray-800 hover:bg-gray-800/50">
-                  <td className="p-3 font-mono text-sm">{entry.id}</td>
-                  <td className="p-3">{entry.date}</td>
-                  <td className="p-3">{entry.description}</td>
-                  <td className="p-3">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full bg-sov-accent/20 text-sov-accent`}>
-                      {entry.source}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                      entry.status === 'Posted' ? 'bg-sov-green/20 text-sov-green' : 'bg-sov-gold/20 text-sov-gold'
-                    }`}>
-                      {entry.status}
-                    </span>
-                  </td>
-                  <td className="p-3 text-right font-mono">${entry.lines[0].amount.toLocaleString()}</td>
-                </tr>
-              ))}
+              {filteredAndSortedJournalEntries.map(entry => {
+                const stripeInfo = getStripePaymentInfo(entry);
+                const reconStatus = getReconciliationStatus(entry);
+                
+                return (
+                  <tr key={entry.id} className="border-b border-gray-800 hover:bg-gray-800/50">
+                    <td className="p-3 font-mono text-sm">{entry.id}</td>
+                    <td className="p-3">{entry.date}</td>
+                    <td className="p-3">
+                      <div>
+                        <div className="font-medium">{entry.description}</div>
+                        {stripeInfo && (
+                          <div className="text-xs text-sov-light-alt mt-1">
+                            Customer: {stripeInfo.customer}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-3">
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full bg-sov-accent/20 text-sov-accent`}>
+                        {entry.source}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                        entry.status === 'Posted' ? 'bg-sov-green/20 text-sov-green' : 'bg-sov-gold/20 text-sov-gold'
+                      }`}>
+                        {entry.status}
+                      </span>
+                    </td>
+                    <td className="p-3 text-center">
+                      {stripeInfo ? (
+                        <div>
+                          <div className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                            stripeInfo.payment.paymentMethodType === 'us_bank_account' ? 'bg-blue-500/20 text-blue-400' :
+                            stripeInfo.payment.paymentMethodType === 'card' ? 'bg-purple-500/20 text-purple-400' :
+                            'bg-gray-500/20 text-gray-400'
+                          }`}>
+                            {stripeInfo.payment.paymentMethodType === 'us_bank_account' ? 'ACH' :
+                             stripeInfo.payment.paymentMethodType === 'card' ? 'Card' :
+                             stripeInfo.payment.paymentMethodType}
+                          </div>
+                        </div>
+                      ) : entry.source === 'NACHA' ? (
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-orange-500/20 text-orange-400">
+                          NACHA
+                        </span>
+                      ) : entry.source === 'INTERCOMPANY' ? (
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-sov-gold/20 text-sov-gold">
+                          Internal
+                        </span>
+                      ) : (
+                        <span className="text-sov-light-alt text-xs">Manual</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-center">
+                      {reconStatus ? (
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${reconStatus.color}`}>
+                          {reconStatus.status}
+                        </span>
+                      ) : (
+                        <span className="text-sov-light-alt text-xs">N/A</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-right font-mono">${entry.lines[0].amount.toLocaleString()}</td>
+                    <td className="p-3 text-center">
+                      <button 
+                        onClick={() => setSelectedEntry(entry)}
+                        className="bg-sov-gold/20 text-sov-gold text-xs font-bold py-1 px-3 rounded hover:bg-sov-gold/30 transition-colors"
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -183,7 +323,7 @@ export const JournalView: React.FC<JournalViewProps> = ({ journalEntries, addJou
             <div>
               <label htmlFor="source" className="block text-sm font-medium text-sov-light-alt">Source</label>
               <select id="source" value={source} onChange={e => setSource(e.target.value as JournalEntry['source'])} required className="mt-1 block w-full bg-sov-dark border border-gray-600 rounded-md shadow-sm py-2 px-3 text-sov-light focus:outline-none focus:ring-sov-accent focus:border-sov-accent">
-                <option>CHAIN</option><option>NACHA</option><option>PO</option><option>AR</option><option>AP</option><option>PURCHASE</option><option>PAYROLL</option>
+                <option>CHAIN</option><option>NACHA</option><option>PO</option><option>AR</option><option>AP</option><option>PURCHASE</option><option>PAYROLL</option><option>INTERCOMPANY</option><option>PAYMENT</option>
               </select>
             </div>
           </div>
@@ -205,11 +345,99 @@ export const JournalView: React.FC<JournalViewProps> = ({ journalEntries, addJou
             </div>
           </div>
 
+          <div className="bg-sov-dark p-4 rounded-lg border border-gray-600">
+            <h4 className="text-sm font-semibold text-sov-light mb-2">Stripe Integration</h4>
+            <p className="text-xs text-sov-light-alt">
+              When selecting PAYMENT source, this entry will be automatically linked to Stripe ACH transactions for reconciliation purposes.
+            </p>
+          </div>
+
           <div className="flex justify-end pt-4 space-x-2">
             <button type="button" onClick={() => setIsModalOpen(false)} className="bg-sov-dark-alt border border-gray-600 text-sov-light font-bold py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors">Cancel</button>
             <button type="submit" className="bg-sov-accent text-sov-dark font-bold py-2 px-4 rounded-lg hover:bg-sov-accent-hover transition-colors">Post Entry</button>
           </div>
         </form>
+      </Modal>
+
+      <Modal isOpen={!!selectedEntry} onClose={() => setSelectedEntry(null)} title="Journal Entry Details">
+        {selectedEntry && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-sov-light-alt">Entry ID</p>
+                <p className="font-mono text-sov-light">{selectedEntry.id}</p>
+              </div>
+              <div>
+                <p className="text-sm text-sov-light-alt">Date</p>
+                <p className="text-sov-light">{selectedEntry.date}</p>
+              </div>
+            </div>
+            
+            <div>
+              <p className="text-sm text-sov-light-alt">Description</p>
+              <p className="text-sov-light">{selectedEntry.description}</p>
+            </div>
+            
+            <div>
+              <p className="text-sm text-sov-light-alt mb-2">Journal Lines</p>
+              <div className="bg-sov-dark p-3 rounded-lg space-y-2">
+                {selectedEntry.lines.map((line, index) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <span className="text-sov-light">{getAccountName(line.accountId)}</span>
+                    <span className={`font-mono ${line.type === 'DEBIT' ? 'text-sov-green' : 'text-sov-red'}`}>
+                      {line.type === 'DEBIT' ? 'Dr' : 'Cr'} ${line.amount.toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {(() => {
+              const stripeInfo = getStripePaymentInfo(selectedEntry);
+              if (stripeInfo) {
+                return (
+                  <div className="bg-sov-dark p-4 rounded-lg border border-gray-600">
+                    <h4 className="text-sm font-semibold text-sov-light mb-3">Stripe Payment Information</h4>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-sov-light-alt">Customer</p>
+                        <p className="text-sov-light">{stripeInfo.customer}</p>
+                      </div>
+                      <div>
+                        <p className="text-sov-light-alt">Payment Method</p>
+                        <p className="text-sov-light">{stripeInfo.payment.paymentMethodType}</p>
+                      </div>
+                      <div>
+                        <p className="text-sov-light-alt">Amount</p>
+                        <p className="text-sov-light">${stripeInfo.amount.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-sov-light-alt">Status</p>
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          stripeInfo.status === 'succeeded' ? 'bg-sov-green/20 text-sov-green' :
+                          stripeInfo.status === 'pending' ? 'bg-sov-gold/20 text-sov-gold' :
+                          'bg-sov-red/20 text-sov-red'
+                        }`}>
+                          {stripeInfo.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
+            <div className="flex justify-end">
+              <button 
+                onClick={() => setSelectedEntry(null)}
+                className="bg-sov-dark-alt border border-gray-600 text-sov-light font-bold py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </>
   );

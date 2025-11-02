@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { KpiCard } from '../components/shared/KpiCard';
 import { analyzeFinancials } from '../services/geminiService';
-import type { JournalEntry, PurchaseOrder, Invoice } from '../types';
+import type { JournalEntry, PurchaseOrder, Invoice, StripeCustomer, AchPayment, DirectDepositPayout } from '../types';
 import { CHART_OF_ACCOUNTS } from '../constants';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Modal } from '../components/shared/Modal';
@@ -14,9 +14,22 @@ interface DashboardViewProps {
     apInvoices: Invoice[];
     addJournalEntry: (entry: Omit<JournalEntry, 'id' | 'date'>) => void;
     intercompanyPayableBalance: number;
+    stripeCustomers?: StripeCustomer[];
+    achPayments?: AchPayment[];
+    directDepositPayouts?: DirectDepositPayout[];
 }
 
-export const DashboardView: React.FC<DashboardViewProps> = ({ journalEntries, purchaseOrders, arInvoices, apInvoices, addJournalEntry, intercompanyPayableBalance }) => {
+export const DashboardView: React.FC<DashboardViewProps> = ({ 
+    journalEntries, 
+    purchaseOrders, 
+    arInvoices, 
+    apInvoices, 
+    addJournalEntry, 
+    intercompanyPayableBalance,
+    stripeCustomers = [],
+    achPayments = [],
+    directDepositPayouts = []
+}) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState('');
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
@@ -185,12 +198,53 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ journalEntries, pu
     document.body.removeChild(link);
   };
 
+  // Calculate Stripe metrics and banking reconciliation data
+  const stripeMetrics = useMemo(() => {
+    const totalAchVolume = achPayments
+      .filter(payment => payment.status === 'succeeded')
+      .reduce((sum, payment) => sum + payment.amountCents / 100, 0);
+
+    const totalDirectDepositVolume = directDepositPayouts
+      .filter(payout => payout.status === 'paid')
+      .reduce((sum, payout) => sum + payout.amountCents / 100, 0);
+
+    const activeCustomers = stripeCustomers.filter(customer => customer.active).length;
+
+    // Banking reconciliation metrics
+    const unreconciledPayments = achPayments.filter(payment => 
+      payment.status === 'succeeded' && !payment.journalEntryId
+    ).length;
+
+    const achReturns = achPayments.filter(payment => 
+      payment.status === 'failed' && payment.returnCode
+    ).length;
+
+    const pendingPayouts = directDepositPayouts.filter(payout => 
+      payout.status === 'pending' || payout.status === 'in_transit'
+    ).length;
+
+    const matchedTransactions = journalEntries.filter(entry => 
+      entry.source === 'PAYMENT' || entry.source === 'NACHA'
+    ).length;
+
+    return {
+      totalAchVolume,
+      totalDirectDepositVolume,
+      activeCustomers,
+      unreconciledPayments,
+      achReturns,
+      pendingPayouts,
+      matchedTransactions,
+    };
+  }, [stripeCustomers, achPayments, directDepositPayouts, journalEntries]);
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <KpiCard title="Total Cash" value={`$${financialMetrics.totalCash.toLocaleString()}`} icon={<CashIcon />} />
         <KpiCard title="Accounts Receivable" value={`$${financialMetrics.totalAR.toLocaleString()}`} icon={<ARIcon />} />
         <KpiCard title="Accounts Payable" value={`$${financialMetrics.totalAP.toLocaleString()}`} icon={<APIcon />} />
+        <KpiCard title="Stripe ACH Volume" value={`$${stripeMetrics.totalAchVolume.toLocaleString()}`} icon={<StripeIcon />} />
         <div className="relative">
              <KpiCard title="Intercompany Payable" value={`$${intercompanyPayableBalance.toLocaleString()}`} icon={<IntercompanyIcon />} />
              {intercompanyPayableBalance > 0 && (
@@ -273,6 +327,82 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ journalEntries, pu
           <p className="text-sov-light-alt text-center py-4">No SOVRCVLT token transactions found in recent journal entries.</p>
         )}
       </div>
+
+      {/* Banking Reconciliation Widgets */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="bg-sov-dark-alt p-6 rounded-lg shadow-lg border border-gray-700">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-sov-light">Stripe Reconciliation</h3>
+            <ReconciliationIcon />
+          </div>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-sov-light-alt">Matched Transactions</span>
+              <span className="text-sov-green font-semibold">{stripeMetrics.matchedTransactions}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sov-light-alt">Unreconciled Payments</span>
+              <span className={`font-semibold ${stripeMetrics.unreconciledPayments > 0 ? 'text-sov-red' : 'text-sov-green'}`}>
+                {stripeMetrics.unreconciledPayments}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sov-light-alt">Active Stripe Customers</span>
+              <span className="text-sov-accent font-semibold">{stripeMetrics.activeCustomers}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-sov-dark-alt p-6 rounded-lg shadow-lg border border-gray-700">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-sov-light">ACH Returns</h3>
+            <ReturnIcon />
+          </div>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-sov-light-alt">Total Returns</span>
+              <span className={`font-semibold ${stripeMetrics.achReturns > 0 ? 'text-sov-red' : 'text-sov-green'}`}>
+                {stripeMetrics.achReturns}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sov-light-alt">ACH Volume (Succeeded)</span>
+              <span className="text-sov-green font-semibold">${stripeMetrics.totalAchVolume.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sov-light-alt">Processing Status</span>
+              <span className="text-sov-gold font-semibold">
+                {stripeMetrics.achReturns === 0 ? 'Healthy' : 'Attention Required'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-sov-dark-alt p-6 rounded-lg shadow-lg border border-gray-700">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-sov-light">Direct Deposit Payouts</h3>
+            <PayoutIcon />
+          </div>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-sov-light-alt">Pending Payouts</span>
+              <span className={`font-semibold ${stripeMetrics.pendingPayouts > 0 ? 'text-sov-gold' : 'text-sov-green'}`}>
+                {stripeMetrics.pendingPayouts}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sov-light-alt">Total Volume (Paid)</span>
+              <span className="text-sov-accent font-semibold">${stripeMetrics.totalDirectDepositVolume.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sov-light-alt">Payout Status</span>
+              <span className="text-sov-green font-semibold">
+                {stripeMetrics.pendingPayouts === 0 ? 'All Clear' : 'Processing'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
       
       <div className="bg-sov-dark-alt p-6 rounded-lg shadow-lg border border-gray-700">
         <h3 className="text-xl font-semibold mb-4 text-sov-light">Financial Reports</h3>
@@ -348,5 +478,9 @@ const CashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-
 const ARIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>;
 const APIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l-4-4 4-4m6 8l4-4-4-4" /></svg>;
 const IntercompanyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h.01M12 7h.01M16 7h.01M9 17h6M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const StripeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>;
 const BurnIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7.014A8.003 8.003 0 0122 12c0 3.771-2.502 7-6 7-1.238 0-2.403-.388-3.343-1.343z" /></svg>;
 const MintIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const ReconciliationIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-sov-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const ReturnIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-sov-red" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const PayoutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-sov-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" /></svg>;

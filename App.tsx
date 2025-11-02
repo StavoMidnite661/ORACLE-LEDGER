@@ -12,6 +12,10 @@ import { VendorPaymentsView } from './views/VendorPaymentsView';
 import { VendorManagementView } from './views/VendorManagementView';
 import { CardManagementView } from './views/CardManagementView';
 import { ConsulCreditsView } from './views/ConsulCreditsView';
+import { StripePaymentsView } from './views/StripePaymentsView';
+import { StripeSettingsView } from './views/StripeSettingsView';
+import { StripeComplianceView } from './views/StripeComplianceView';
+import { StripeReportsView } from './views/StripeReportsView';
 import { PayrollView } from './views/PayrollView';
 import { SettingsView } from './views/SettingsView';
 import { mockConfig, mockSupportedTokens, mockTransactions, mockStats } from './mockData';
@@ -209,7 +213,17 @@ const App: React.FC = () => {
     if (error) return <div className="text-red-500">Error: {error}</div>;
 
     switch (activeView) {
-      case View.Dashboard: return <DashboardView journalEntries={journalEntries} addJournalEntry={addJournalEntry} purchaseOrders={purchaseOrders} arInvoices={arInvoices} apInvoices={apInvoices} intercompanyPayableBalance={intercompanyPayableBalance} />;
+      case View.Dashboard: return <DashboardView 
+        journalEntries={journalEntries} 
+        addJournalEntry={addJournalEntry} 
+        purchaseOrders={purchaseOrders} 
+        arInvoices={arInvoices} 
+        apInvoices={apInvoices} 
+        intercompanyPayableBalance={intercompanyPayableBalance}
+        stripeCustomers={[]}
+        achPayments={[]}
+        directDepositPayouts={[]}
+      />;
       case View.Journal: return <JournalView journalEntries={journalEntries} addJournalEntry={addJournalEntry} />;
       case View.ChartOfAccounts: return <ChartOfAccountsView journalEntries={journalEntries} />;
       case View.PurchaseOrders: return <PurchaseOrdersView purchaseOrders={purchaseOrders} addPurchaseOrder={addPurchaseOrder} />;
@@ -219,9 +233,23 @@ const App: React.FC = () => {
       case View.VendorManagement: return <VendorManagementView vendors={vendors} addVendor={addVendor} updateVendor={updateVendor} />;
       case View.CardManagement: return <CardManagementView cards={companyCards} transactions={cardTransactions} addCard={addCompanyCard} updateCard={updateCompanyCard} />;
       case View.ConsulCredits: return consulCreditsConfig && consulCreditsStats ? <ConsulCreditsView config={consulCreditsConfig} supportedTokens={supportedTokens} transactions={consulCreditsTransactions} stats={consulCreditsStats} updateConfig={updateConsulCreditsConfig} /> : <div>Loading Consul Credits data...</div>;
+      case View.StripePayments: return <StripePaymentsView />;
+      case View.StripeSettings: return <StripeSettingsView />;
+      case View.StripeCompliance: return <StripeComplianceView />;
+      case View.StripeReports: return <StripeReportsView />;
       case View.Payroll: return <PayrollView employees={employees} addEmployee={addEmployee} updateEmployee={updateEmployee} addJournalEntry={addJournalEntry} />;
       case View.Settings: return <SettingsView contractAddress={contractAddress} setContractAddress={setContractAddress} />;
-      default: return <DashboardView journalEntries={journalEntries} addJournalEntry={addJournalEntry} purchaseOrders={purchaseOrders} arInvoices={arInvoices} apInvoices={apInvoices} intercompanyPayableBalance={intercompanyPayableBalance} />;
+      default: return <DashboardView 
+        journalEntries={journalEntries} 
+        addJournalEntry={addJournalEntry} 
+        purchaseOrders={purchaseOrders} 
+        arInvoices={arInvoices} 
+        apInvoices={apInvoices} 
+        intercompanyPayableBalance={intercompanyPayableBalance}
+        stripeCustomers={[]}
+        achPayments={[]}
+        directDepositPayouts={[]}
+      />;
     }
   };
 

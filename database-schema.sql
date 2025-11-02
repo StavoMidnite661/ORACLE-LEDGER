@@ -188,7 +188,106 @@ CREATE TABLE consul_credits_config (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Indexes for Performance
+-- ==============================
+-- STRIPE PAYMENT PROCESSING ACCOUNTS
+-- ==============================
+
+-- Insert Stripe-related asset accounts
+INSERT INTO accounts (id, name, type, entity, created_at) VALUES
+(1050, 'ACH-Settlement-Account', 'Asset', 'LLC', NOW()),
+(1060, 'Stripe-Clearing-Account', 'Asset', 'LLC', NOW())
+ON CONFLICT (id) DO UPDATE SET 
+  name = EXCLUDED.name,
+  type = EXCLUDED.type,
+  entity = EXCLUDED.entity;
+
+-- Insert Stripe-related liability accounts
+INSERT INTO accounts (id, name, type, entity, created_at) VALUES
+(2180, 'Direct-Deposit-Liabilities', 'Liability', 'LLC', NOW())
+ON CONFLICT (id) DO UPDATE SET 
+  name = EXCLUDED.name,
+  type = EXCLUDED.type,
+  entity = EXCLUDED.entity;
+
+-- Insert Stripe-related expense accounts
+INSERT INTO accounts (id, name, type, entity, created_at) VALUES
+(6150, 'ACH-Processing-Fees', 'Expense', 'LLC', NOW()),
+(6160, 'Stripe-Processing-Fees', 'Expense', 'LLC', NOW()),
+(6170, 'Bank-Charges-Expense', 'Expense', 'LLC', NOW()),
+(6180, 'Payment-Card-Fees', 'Expense', 'LLC', NOW())
+ON CONFLICT (id) DO UPDATE SET 
+  name = EXCLUDED.name,
+  type = EXCLUDED.type,
+  entity = EXCLUDED.entity;
+
+-- Stripe account mappings table
+CREATE TABLE IF NOT EXISTS stripe_account_mappings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    stripe_account_type VARCHAR(100) NOT NULL UNIQUE,
+    account_id INTEGER NOT NULL,
+    description TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    FOREIGN KEY (account_id) REFERENCES accounts(id)
+);
+
+-- Insert Stripe account type mappings
+INSERT INTO stripe_account_mappings (stripe_account_type, account_id, description) VALUES
+('ACH_SETTLEMENT_ACCOUNT', 1050, 'Asset account for incoming ACH payments from customers'),
+('STRIPE_CLEARING_ACCOUNT', 1060, 'Asset account for Stripe balance and pending payouts'),
+('ACH_PROCESSING_FEES', 6150, 'Expense account for ACH transaction processing fees'),
+('STRIPE_PROCESSING_FEES', 6160, 'Expense account for Stripe payment processing fees'),
+('DIRECT_DEPOSIT_LIABILITIES', 2180, 'Liability account for employee direct deposit payables'),
+('BANK_CHARGES_EXPENSE', 6170, 'Expense account for general banking fees and charges'),
+('PAYMENT_CARD_FEES', 6180, 'Expense account for credit/debit card processing fees')
+ON CONFLICT (stripe_account_type) DO UPDATE SET 
+  account_id = EXCLUDED.account_id,
+  description = EXCLUDED.description,
+  updated_at = NOW();
+
+-- Stripe payment reconciliation table
+CREATE TABLE IF NOT EXISTS stripe_payment_reconciliation (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    stripe_balance_transaction_id VARCHAR(255) UNIQUE,
+    amount_cents BIGINT NOT NULL,
+    fee_cents BIGINT DEFAULT 0,
+    net_cents BIGINT NOT NULL,
+    currency VARCHAR(3) DEFAULT 'USD',
+    transaction_type VARCHAR(50) NOT NULL,
+    stripe_created TIMESTAMP WITH TIME ZONE,
+    available_on TIMESTAMP WITH TIME ZONE,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    account_id INTEGER NOT NULL,
+    journal_entry_id VARCHAR(50),
+    reconciled_at TIMESTAMP WITH TIME ZONE,
+    reconciled_by VARCHAR(255),
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    FOREIGN KEY (account_id) REFERENCES accounts(id),
+    FOREIGN KEY (journal_entry_id) REFERENCES journal_entries(id)
+);
+
+-- ACH processing log table
+CREATE TABLE IF NOT EXISTS ach_processing_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ach_payment_id UUID,
+    stripe_charge_id VARCHAR(255),
+    processing_fee_cents BIGINT NOT NULL,
+    processing_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    account_id INTEGER NOT NULL,
+    journal_entry_id VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    FOREIGN KEY (account_id) REFERENCES accounts(id),
+    FOREIGN KEY (journal_entry_id) REFERENCES journal_entries(id)
+);
+
+-- ==============================
+-- INDEXES FOR PERFORMANCE
+-- ==============================
+
+-- Original indexes
 CREATE INDEX idx_journal_lines_entry ON journal_lines(journal_entry_id);
 CREATE INDEX idx_journal_lines_account ON journal_lines(account_id);
 CREATE INDEX idx_card_transactions_card ON card_transactions(card_id);
@@ -197,3 +296,34 @@ CREATE INDEX idx_po_items_po ON purchase_order_items(purchase_order_id);
 CREATE INDEX idx_consul_tx_hash ON consul_credits_transactions(tx_hash);
 CREATE INDEX idx_consul_status ON consul_credits_transactions(status);
 CREATE INDEX idx_card_reveal_card ON card_reveal_audit(card_id);
+
+-- Stripe indexes
+CREATE INDEX idx_stripe_account_mappings_type ON stripe_account_mappings(stripe_account_type);
+CREATE INDEX idx_stripe_account_mappings_account ON stripe_account_mappings(account_id);
+CREATE INDEX idx_stripe_reconciliation_stripe_id ON stripe_payment_reconciliation(stripe_balance_transaction_id);
+CREATE INDEX idx_stripe_reconciliation_account ON stripe_payment_reconciliation(account_id);
+CREATE INDEX idx_stripe_reconciliation_status ON stripe_payment_reconciliation(status);
+CREATE INDEX idx_ach_processing_account ON ach_processing_log(account_id);
+CREATE INDEX idx_ach_processing_date ON ach_processing_log(processing_date);
+
+-- ==============================
+-- TRIGGERS FOR AUTOMATIC UPDATES
+-- ==============================
+
+-- Function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Add updated_at triggers
+CREATE TRIGGER update_stripe_account_mappings_updated_at 
+    BEFORE UPDATE ON stripe_account_mappings
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_stripe_payment_reconciliation_updated_at 
+    BEFORE UPDATE ON stripe_payment_reconciliation
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
