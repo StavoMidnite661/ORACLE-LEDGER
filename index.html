@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SOVRCVLT ORACLE-LEDGER</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              "sov-dark": "#030303", // Jet Black
+              "sov-dark-alt": "#0A0A0A", // Slightly lighter black
+              "sov-accent": "#00D4FF",
+              "sov-accent-hover": "#00B8E6",
+              "sov-light": "#F0F4F8",
+              "sov-light-alt": "#8899A6", // Dimmer text for contrast
+              "sov-gold": "#FFD700",
+              "sov-green": "#00FF88",
+              "sov-red": "#FF4747",
+              "sov-orange": "#FF9900",
+              "sov-primary": "#00D4FF",
+              "sov-secondary": "#00FF88",
+              "sov-purple": "#9D50FF",
+              "sov-pink": "#FF50B0",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      @media print {
+        body * {
+          visibility: hidden;
+        }
+        #payroll-stub-printable,
+        #payroll-stub-printable * {
+          visibility: visible;
+        }
+        #payroll-stub-printable {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-sov-dark">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
