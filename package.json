@@ -33,6 +33,11 @@
     "react-dom": "^19.1.1",
     "recharts": "^3.1.2",
     "stripe": "^16.8.0",
+<<<<<<< Updated upstream
+=======
+    "tailwind-merge": "^3.4.1",
+    "tigerbeetle-node": "^0.16.77",
+>>>>>>> Stashed changes
     "ts-node": "^10.9.2",
     "tsx": "^4.20.5",
     "web3": "^4.16.0",
